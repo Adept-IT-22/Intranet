@@ -6,8 +6,10 @@ import EmployeeDirectory from "./components/Pages/EmployeeDirectory";
 import ITSupport from "./components/Pages/ITSupport";
 import Calendar from "./components/Pages/Calendar";
 import LMS from "./components/Pages/LMS";
-import Home from "./components/Pages/Home"; // If you have a Home page
+import Home from "./components/Pages/Home"; 
 import Announcements from "./components/Pages/Announcements";
+import Innovations from "./components/Pages/Innovations"; 
+
 
 const App = () => {
   return (
@@ -21,6 +23,7 @@ const App = () => {
         <Route path="calendar" element={<Calendar />} />
         <Route path="lms" element={<LMS />} />
         <Route path="announcements" element={<Announcements />} />
+        <Route path="innovations" element={<Innovations />} />
       </Route>
     </Routes>
   );
