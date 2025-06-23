@@ -3,26 +3,26 @@ import React, { useState } from "react";
 const employeesData = [
   {
     id: 1,
-    name: "Alice Johnson",
+    name: "Ann",
     role: "Frontend Developer",
     department: "Engineering",
-    email: "alice.johnson@example.com",
+    email: "ann@example.com",
     photo: "https://randomuser.me/api/portraits/women/44.jpg",
   },
   {
     id: 2,
-    name: "Bob Smith",
+    name: "Mark",
     role: "Backend Developer",
     department: "Engineering",
-    email: "bob.smith@example.com",
+    email: "mark@example.com",
     photo: "https://randomuser.me/api/portraits/men/34.jpg",
   },
   {
     id: 3,
-    name: "Carol Lee",
+    name: "Carol ",
     role: "Product Manager",
     department: "Product",
-    email: "carol.lee@example.com",
+    email: "carol@example.com",
     photo: "https://randomuser.me/api/portraits/women/65.jpg",
   },
   // Add more employees here

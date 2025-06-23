@@ -14,10 +14,10 @@ const ITSupport = () => {
           <h2 style={{ color: "#004080" }}>Helpdesk Contacts</h2>
           <div style={{ fontWeight: "bold", marginBottom: 10 }}>
             <p>
-              Phone: <a href="tel:+15551234567" style={{ color: "#004080", textDecoration: "none" }}>+1 (555) 123-4567</a>
+              Phone: <a href="tel:+0712345678" style={{ color: "#004080", textDecoration: "none" }}>+254 712345678</a>
             </p>
             <p>
-              Email: <a href="mailto:support@yourcompany.com" style={{ color: "#004080", textDecoration: "none" }}>support@yourcompany.com</a>
+              Email: <a href="mailto:support@anqad.com" style={{ color: "#004080", textDecoration: "none" }}>support@anqad.com</a>
             </p>
             <p>
               Live Chat: Available Monday–Friday, 8:00 AM – 6:00 PM via{" "}
@@ -71,7 +71,7 @@ const ITSupport = () => {
             <dt style={{ fontWeight: "bold", marginTop: 15 }}>What should I do if I receive a suspicious email?</dt>
             <dd style={{ marginLeft: 20, marginBottom: 15 }}>
               Do not open links or attachments and immediately report the email to{" "}
-              <a href="mailto:security@yourcompany.com" style={{ color: "#004080" }}>security@yourcompany.com</a>.
+              <a href="mailto:support@anqad.com" style={{ color: "#004080" }}>support@anqad.com</a>.
             </dd>
           </dl>
         </section>
@@ -157,7 +157,7 @@ const ITSupport = () => {
       </main>
 
       <footer style={{ textAlign: "center", marginTop: 40, marginBottom: 20, color: "#666", fontSize: "0.9em" }}>
-        &copy; 2025 Your Company IT Support. All rights reserved.
+        &copy; 2025 Adept Technologies. All rights reserved.
       </footer>
     </div>
   );

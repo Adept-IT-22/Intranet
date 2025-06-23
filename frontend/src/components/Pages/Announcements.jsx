@@ -35,9 +35,9 @@ const announcementsData = [
   },
   {
     id: 2,
-    title: 'New Remote Work Policy',
+    title: 'New  Work Policy',
     date: 'May 20, 2025',
-    summary: 'We have updated our remote work guidelines effective June 1st.',
+    summary: 'We have updated our  work guidelines effective June 1st.',
     details:
       'Employees can now work remotely up to three days a week. Please review the full policy document on the HR page.',
   },
