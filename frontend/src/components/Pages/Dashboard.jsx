@@ -47,31 +47,31 @@ export default function Dashboard() {
             fontSize: "1.5rem",
           }}
         >
-          <Link to="/" title="Dashboard Home" style={{ color: "white" }}>
+          <Link to="/dashboard" title="Dashboard Home" style={{ color: "white" }}>
             <FaTh />
           </Link>
-          <Link to="/employee-directory" title="Employee Directory" style={{ color: "white" }}>
+          <Link to="/dashboard/employee-directory" title="Employee Directory" style={{ color: "white" }}>
             <FaUsers />
           </Link>
-          <Link to="/announcements" title="Announcements" style={{ color: "white" }}>
+          <Link to="/dashboard/announcements" title="Announcements" style={{ color: "white" }}>
             <FaBullhorn />
           </Link>
-          <Link to="/chats" title="Chats" style={{ color: "white" }}>
+          <Link to="/dashboard/chats" title="Chats" style={{ color: "white" }}>
             <FaComments />
           </Link>
-          <Link to="/teams" title="Teams" style={{ color: "white" }}>
+          <Link to="/dashboard/teams" title="Teams" style={{ color: "white" }}>
             <FaPeopleCarry />
           </Link>
-          <Link to="/it-support" title="IT Support" style={{ color: "white" }}>
+          <Link to="/dashboard/it-support" title="IT Support" style={{ color: "white" }}>
             <FaLaptop />
           </Link>
-          <Link to="/calendar" title="Calendar" style={{ color: "white" }}>
+          <Link to="/dashboard/calendar" title="Calendar" style={{ color: "white" }}>
             <FaCalendarAlt />
           </Link>
-          <Link to="/lms" title="LMS" style={{ color: "white" }}>
+          <Link to="/dashboard/lms" title="LMS" style={{ color: "white" }}>
             <FaBook />
           </Link>
-          <Link to="/innovations" title="Innovations" style={{ color: "white" }}>
+          <Link to="/dashboard/innovations" title="Innovations" style={{ color: "white" }}>
             <FaLightbulb />
           </Link>
         </nav>
@@ -92,7 +92,7 @@ export default function Dashboard() {
             position: "relative",
           }}
         >
-          {/* Logo left */}
+          {/* Logo */}
           <div style={{ display: "flex", alignItems: "center" }}>
             <img
               src={logo}
@@ -101,7 +101,7 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Search bar center */}
+          {/* Search */}
           <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
             <input
               type="text"
@@ -118,7 +118,7 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* User profile right */}
+          {/* User info */}
           <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
             <span style={{ textAlign: "right" }}>
               <div style={{ fontWeight: "600", color: "#333" }}>{user.name}</div>
@@ -138,7 +138,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Main Page Content */}
         <main style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
           <div style={{ paddingLeft: "10px", maxWidth: "300px" }}>
             <GreetingsBar />

@@ -1,23 +1,38 @@
-import React from "react";
+import React, { useState } from "react";
 
 export default function HomePage() {
+  const [hoveredBox, setHoveredBox] = useState(null);
+
+  const handleMouseEnter = (index) => setHoveredBox(index);
+  const handleMouseLeave = () => setHoveredBox(null);
+
+  const getBoxStyle = (index) => ({
+    ...styles.infoBox,
+    ...(hoveredBox === index ? styles.infoBoxHover : {}),
+  });
+
   return (
     <div style={styles.container}>
       <h1 style={styles.welcome}>Welcome to Adept Technologies Intranet</h1>
 
       <div style={styles.infoBoxes}>
-        <div style={styles.infoBox}>
-          <h3>Announcements</h3>
-          <p>No new announcements</p>
-        </div>
-        <div style={styles.infoBox}>
-          <h3>Upcoming Meetings</h3>
-          <p>Team sync on Friday</p>
-        </div>
-        <div style={styles.infoBox}>
-          <h3>Tasks</h3>
-          <p>3 tasks pending</p>
-        </div>
+        {["Announcements", "Upcoming Meetings", "Tasks"].map((title, index) => (
+          <div
+            key={index}
+            style={getBoxStyle(index)}
+            onMouseEnter={() => handleMouseEnter(index)}
+            onMouseLeave={handleMouseLeave}
+          >
+            <h3>{title}</h3>
+            <p>
+              {title === "Announcements"
+                ? "No new announcements"
+                : title === "Upcoming Meetings"
+                ? "Team sync on Friday"
+                : "3 tasks pending"}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -47,5 +62,11 @@ const styles = {
     padding: 20,
     borderRadius: 8,
     boxShadow: "0 3px 8px rgba(0,0,0,0.1)",
+    cursor: "pointer",
+    transition: "transform 0.3s, box-shadow 0.3s",
+  },
+  infoBoxHover: {
+    transform: "scale(1.05)",
+    boxShadow: "0 6px 12px rgba(0,0,0,0.15)",
   },
 };

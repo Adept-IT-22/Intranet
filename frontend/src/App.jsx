@@ -1,26 +1,26 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Login from "./components/Pages/login";
 import Dashboard from "./components/Pages/Dashboard";
+import Home from "./components/Pages/Home";
 import Chats from "./components/Pages/Chats";
 import Teams from "./components/Pages/Teams";
 import EmployeeDirectory from "./components/Pages/EmployeeDirectory";
 import ITSupport from "./components/Pages/ITSupport";
 import Calendar from "./components/Pages/Calendar";
 import LMS from "./components/Pages/LMS";
-import Home from "./components/Pages/Home";
 import Announcements from "./components/Pages/Announcements";
 import Innovations from "./components/Pages/Innovations";
-import Login from "./components/Pages/login";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const App = () => {
   return (
     <Routes>
-      {/* Public Route */}
+      {/* Public login route */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected Routes */}
-      <Route path="/" element={<ProtectedRoute />}>
-        <Route path="/" element={<Dashboard />}>
+      {/* Protected app routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<Dashboard />}>
           <Route index element={<Home />} />
           <Route path="chats" element={<Chats />} />
           <Route path="teams" element={<Teams />} />
@@ -32,6 +32,9 @@ const App = () => {
           <Route path="innovations" element={<Innovations />} />
         </Route>
       </Route>
+
+      {/* Redirect root to login */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 };
