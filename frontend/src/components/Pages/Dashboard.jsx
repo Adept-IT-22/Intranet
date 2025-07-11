@@ -97,7 +97,7 @@ export default function Dashboard() {
             <img
               src={logo}
               alt="Adept Technologies Logo"
-              style={{ height: "60px", objectFit: "contain" }}
+              style={{ height: "150px", objectFit: "contain" }}
             />
           </div>
 
