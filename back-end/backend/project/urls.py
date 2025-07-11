@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from backend import views  # adjust if your views are in a sub-app
+from backend import views 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
