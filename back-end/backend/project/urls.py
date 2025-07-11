@@ -4,8 +4,11 @@ from backend import views
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
+    path('', views.root_view, name='root'),  # 👈 This handles http://127.0.0.1:8000/
+
+    # Admin panel
     path('admin/', admin.site.urls),
-    
+
     # Signup endpoint
     path('api/signup/', views.SignUpView.as_view(), name='signup'),
 
