@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from .models import ChatMessage
+from rest_framework import status
 
 User = get_user_model()
 
@@ -33,3 +34,10 @@ def chat_history(request, username):
             "timestamp": msg.timestamp,
         } for msg in messages
     ])
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def mark_messages_as_read(request, username):
+    other_user = get_object_or_404(User, username=username)
+    ChatMessage.objects.filter(sender=other_user, receiver=request.user, is_read=False).update(is_read=True)
+    return Response({"status": "success"}, status=status.HTTP_200_OK)

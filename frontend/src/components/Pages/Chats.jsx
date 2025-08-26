@@ -16,12 +16,11 @@ const Chats = () => {
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // ✅ Fetch logged-in user & user list on mount
+  // Fetch logged-in user & user list on mount
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) return console.error("❌ No token found. Please log in.");
 
-    // Logged-in user
     fetch("http://127.0.0.1:8000/api/auth/user/", {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -32,7 +31,6 @@ const Chats = () => {
     fetchUsers();
   }, []);
 
-  // ✅ Fetch users list with last_message + unread_count
   const fetchUsers = () => {
     const token = localStorage.getItem("access_token");
     fetch(`${API_BASE}/users/`, {
@@ -43,12 +41,12 @@ const Chats = () => {
       .catch((err) => console.error("❌ Failed to fetch users:", err));
   };
 
-  // ✅ Scroll chat to bottom when messages update
+  // Scroll chat to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages[selectedChat]]);
 
-  // ✅ Connect WebSocket when selecting a chat
+  // WebSocket connection
   useEffect(() => {
     if (!selectedChat || !currentUser) return;
 
@@ -56,10 +54,8 @@ const Chats = () => {
     const roomName = [currentUser, selectedChat].sort().join("_");
     const wsUrl = `ws://127.0.0.1:8000/ws/chat/${roomName}/?token=${token}`;
 
-    // ✅ Fetch chat history when chat opens
     fetchChatHistory(selectedChat);
 
-    console.log("🔗 Connecting WebSocket:", wsUrl);
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
@@ -82,19 +78,14 @@ const Chats = () => {
         [selectedChat]: [...(prev[selectedChat] || []), newMsg],
       }));
 
-      // ✅ Refresh users list for unread/last message update
       fetchUsers();
     };
 
     socket.onclose = () => console.log("❌ WebSocket closed");
 
-    // ✅ Mark all messages as read when opening chat
-    markMessagesAsRead(selectedChat);
-
     return () => socket.close();
   }, [selectedChat, currentUser]);
 
-  // ✅ Fetch chat history for selected user
   const fetchChatHistory = (username) => {
     const token = localStorage.getItem("access_token");
     fetch(`${API_BASE}/history/${username}/`, {
@@ -115,18 +106,6 @@ const Chats = () => {
       .catch((err) => console.error("❌ Failed to load chat history:", err));
   };
 
-  // ✅ Mark all messages as read
-  const markMessagesAsRead = (username) => {
-    const token = localStorage.getItem("access_token");
-    fetch(`${API_BASE}/mark-read/${username}/`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(() => fetchUsers()) // ✅ Refresh sidebar badges
-      .catch((err) => console.error("❌ Failed to mark as read:", err));
-  };
-
-  // ✅ Send message via WebSocket
   const sendMessage = () => {
     if (!message.trim()) return;
 
@@ -143,6 +122,22 @@ const Chats = () => {
 
     socketRef.current.send(JSON.stringify(payload));
     setMessage("");
+
+    // Update local chat immediately
+    setChatMessages((prev) => ({
+      ...prev,
+      [selectedChat]: [
+        ...(prev[selectedChat] || []),
+        {
+          id: crypto.randomUUID(),
+          sender: currentUser,
+          content: payload.message,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isMe: true,
+          avatar: "👤",
+        },
+      ],
+    }));
   };
 
   const handleKeyPress = (e) => {
@@ -152,25 +147,21 @@ const Chats = () => {
     }
   };
 
-  // ✅ Filter out current user + apply search
   const filteredUsers = users
-    .filter((u) => u.username !== currentUser) // ✅ Exclude self
+    .filter((u) => u.username !== currentUser)
     .filter((u) => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="chat-container">
-      {/* ✅ Sidebar */}
+      {/* Sidebar */}
       <div className="chat-sidebar">
         <div className="chat-header">
           <div className="chat-header-left">
-            <div className="chat-logo">
-              <span>✨</span>
-            </div>
+            <div className="chat-logo"><span>✨</span></div>
             <h1>Chat</h1>
           </div>
           <button className="create-chat-btn" title="Create new chat">
-            <Plus size={16} />
-            <span>Create Chat</span>
+            <Plus size={16} /><span>Create Chat</span>
           </button>
         </div>
 
@@ -183,7 +174,6 @@ const Chats = () => {
           />
         </div>
 
-        {/* ✅ Users list */}
         <div className="recent-chats-section">
           <h2>Users</h2>
           <div className="recent-chats-list">
@@ -194,40 +184,26 @@ const Chats = () => {
                   onClick={() => setSelectedChat(user.username)}
                   className={`chat-item ${selectedChat === user.username ? "selected" : ""}`}
                 >
-                  <div className="chat-avatar">
-                    <span>👤</span>
-                  </div>
+                  <div className="chat-avatar"><span>👤</span></div>
                   <div className="chat-info">
                     <p className="chat-name">{user.username}</p>
-
-                    {/* ✅ Last message preview */}
-                    <p className="chat-last-msg">
-                      {user.last_message ? user.last_message.slice(0, 25) : "No messages yet"}
-                    </p>
+                    <p className="chat-last-msg">{user.last_message ? user.last_message.slice(0, 25) : "No messages yet"}</p>
                   </div>
-
-                  {/* ✅ Unread badge */}
-                  {user.unread_count > 0 && (
-                    <span className="unread-badge">{user.unread_count}</span>
-                  )}
+                  {user.unread_count > 0 && <span className="unread-badge">{user.unread_count}</span>}
                 </div>
               ))
-            ) : (
-              <div style={{ padding: "10px" }}>No users found</div>
-            )}
+            ) : <div style={{ padding: "10px" }}>No users found</div>}
           </div>
         </div>
       </div>
 
-      {/* ✅ Chat Window */}
+      {/* Chat Window */}
       <div className="chat-main">
         {selectedChat ? (
           <>
             <div className="chat-main-header">
               <div className="chat-main-header-content">
-                <div className="current-chat-avatar">
-                  <span>{selectedChat[0]}</span>
-                </div>
+                <div className="current-chat-avatar"><span>{selectedChat[0]}</span></div>
                 <div className="current-chat-info">
                   <h2>{selectedChat}</h2>
                   <p>Active now</p>
@@ -237,19 +213,14 @@ const Chats = () => {
 
             <div className="messages-container">
               {(chatMessages[selectedChat] || []).map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`message-wrapper ${msg.isMe ? "my-message" : "other-message"}`}
-                >
+                <div key={msg.id} className={`message-wrapper ${msg.isMe ? "my-message" : "other-message"}`}>
                   <div className="message-content">
                     <div className="message-avatar">{msg.avatar}</div>
                     <div className="message-bubble-wrapper">
                       <div className={`message-bubble ${msg.isMe ? "my-bubble" : "other-bubble"}`}>
                         <p>{msg.content}</p>
                       </div>
-                      <p className="message-info">
-                        {msg.sender} • {msg.time}
-                      </p>
+                      <p className="message-info">{msg.sender} • {msg.time}</p>
                     </div>
                   </div>
                 </div>
@@ -260,9 +231,7 @@ const Chats = () => {
 
             <div className="message-input-container">
               <div className="message-input-wrapper">
-                <button className="input-icon-btn" title="Attachment" disabled>
-                  <Paperclip size={20} />
-                </button>
+                <button className="input-icon-btn" title="Attachment" disabled><Paperclip size={20} /></button>
                 <textarea
                   value={message}
                   onChange={(e) => {
@@ -275,9 +244,7 @@ const Chats = () => {
                   className="message-input"
                   rows={1}
                 />
-                <button className="input-icon-btn" title="Voice" disabled>
-                  <Mic size={20} />
-                </button>
+                <button className="input-icon-btn" title="Voice" disabled><Mic size={20} /></button>
                 <button
                   onClick={sendMessage}
                   className={`send-btn ${!message.trim() ? "disabled" : ""}`}
@@ -289,9 +256,7 @@ const Chats = () => {
               </div>
             </div>
           </>
-        ) : (
-          <div style={{ padding: "20px" }}>👈 Select a user to start chatting</div>
-        )}
+        ) : <div style={{ padding: "20px" }}>👈 Select a user to start chatting</div>}
       </div>
     </div>
   );
