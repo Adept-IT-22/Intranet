@@ -1,162 +1,262 @@
-import React from "react";
+import React, { useState } from "react";
 
 const ITSupport = () => {
+  const [ticket, setTicket] = useState({
+    title: "",
+    name: "",
+    email: "",
+    category: "Hardware",
+    description: "",
+  });
+
+  const [status, setStatus] = useState(null); // "success" or "error"
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setTicket({ ...ticket, [name]: value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus(null);
+
+    try {
+      // ✅ Get JWT from localStorage (from login)
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        setStatus("unauthorized");
+        return;
+      }
+
+      const res = await fetch("http://localhost:8000/api/support/tickets/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`, // ✅ must be Bearer for SimpleJWT
+        },
+        body: JSON.stringify(ticket),
+      });
+
+      if (res.ok) {
+        setStatus("success");
+        setTicket({
+          title: "",
+          name: "",
+          email: "",
+          category: "Hardware",
+          description: "",
+        });
+      } else if (res.status === 401) {
+        setStatus("unauthorized");
+      } else {
+        const errorData = await res.json();
+        console.error("Submission error:", errorData);
+        setStatus("error");
+      }
+    } catch (error) {
+      console.error("Error submitting ticket:", error);
+      setStatus("error");
+    }
+  };
+
   return (
-    <div style={{ fontFamily: "Arial, sans-serif", color: "#333", padding: "20px", backgroundColor: "#f9f9f9", minHeight: "100vh" }}>
-      <header style={{ backgroundColor: "#004080", color: "white", padding: "20px 0", textAlign: "center" }}>
+    <div
+      style={{
+        fontFamily: "Arial, sans-serif",
+        color: "#333",
+        padding: 20,
+        background: "#f9f9f9",
+        minHeight: "100vh",
+      }}
+    >
+      {/* Header */}
+      <header
+        style={{
+          background: "#004080",
+          color: "#fff",
+          padding: "20px",
+          textAlign: "center",
+        }}
+      >
         <h1>IT Support Center</h1>
-        <p>We're here to help you with all your technical needs.</p>
+        <p>Quick help for all your tech needs</p>
       </header>
 
-      <main style={{ maxWidth: 900, margin: "20px auto", backgroundColor: "white", padding: 20, borderRadius: 8, boxShadow: "0 0 8px rgba(0,0,0,0.1)" }}>
-        {/* Helpdesk Contacts */}
-        <section id="helpdesk-contacts" style={{ marginBottom: 40 }}>
-          <h2 style={{ color: "#004080" }}>Helpdesk Contacts</h2>
-          <div style={{ fontWeight: "bold", marginBottom: 10 }}>
-            <p>
-              Phone: <a href="tel:+0712345678" style={{ color: "#004080", textDecoration: "none" }}>+254 712345678</a>
-            </p>
-            <p>
-              Email: <a href="mailto:support@anqad.com" style={{ color: "#004080", textDecoration: "none" }}>support@anqad.com</a>
-            </p>
-            <p>
-              Live Chat: Available Monday–Friday, 8:00 AM – 6:00 PM via{" "}
-              <a href="#" target="_blank" rel="noopener noreferrer" style={{ color: "#004080", textDecoration: "none" }}>
-                Live Chat Portal
-              </a>
-            </p>
-          </div>
-          <p>You can reach out during business hours for immediate assistance or submit a ticket for non-urgent issues.</p>
+      <main
+        style={{
+          maxWidth: 800,
+          margin: "20px auto",
+          background: "#fff",
+          padding: 20,
+          borderRadius: 8,
+          boxShadow: "0 0 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        {/* Contact Info */}
+        <section style={{ marginBottom: 30 }}>
+          <h2 style={{ color: "#004080" }}>Contact</h2>
+          <p>
+            <strong>Phone:</strong>{" "}
+            <a href="tel:+254712345678" style={{ color: "#004080" }}>
+              +254 712 345 678
+            </a>
+          </p>
+          <p>
+            <strong>Email:</strong>{" "}
+            <a href="mailto:support@anqad.com" style={{ color: "#004080" }}>
+              support@anqad.com
+            </a>
+          </p>
+          <p>Mon–Fri: 8 AM – 6 PM | Emergencies 24/7</p>
         </section>
 
-        {/* Ticketing System */}
-        <section id="ticketing-system" style={{ marginBottom: 40 }}>
-          <h2 style={{ color: "#004080" }}>Ticketing System</h2>
-          <p>
-            To ensure your issues are tracked and resolved efficiently, please submit your support requests through our ticketing system:
-          </p>
-          <ul>
-            <li>Visit the <a href="#" target="_blank" rel="noopener noreferrer" style={{ color: "#004080" }}>IT Support Ticket Portal</a></li>
-            <li>Fill in the required details about your issue</li>
-            <li>Select the relevant category (Hardware, Software, Network, Access, etc.)</li>
-            <li>Submit your ticket and receive a confirmation email with your ticket number</li>
-          </ul>
-          <p>Our support team will respond within 4 business hours and keep you updated on progress.</p>
+        {/* Ticket Form */}
+        <section style={{ marginBottom: 30 }}>
+          <h2 style={{ color: "#004080" }}>Submit a Ticket</h2>
+
+          {status === "success" && (
+            <p style={{ color: "green" }}>✅ Ticket submitted successfully!</p>
+          )}
+          {status === "error" && (
+            <p style={{ color: "red" }}>❌ Failed to submit ticket.</p>
+          )}
+          {status === "unauthorized" && (
+            <p style={{ color: "orange" }}>
+              ⚠️ You are not authorized. Please log in.
+            </p>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+          >
+            <input
+              type="text"
+              name="title"
+              placeholder="Ticket Title"
+              value={ticket.title}
+              onChange={handleChange}
+              required
+              style={{
+                padding: 10,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+              }}
+            />
+
+            <input
+              type="text"
+              name="name"
+              placeholder="Your Name"
+              value={ticket.name}
+              onChange={handleChange}
+              required
+              style={{
+                padding: 10,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+              }}
+            />
+
+            <input
+              type="email"
+              name="email"
+              placeholder="Your Email"
+              value={ticket.email}
+              onChange={handleChange}
+              required
+              style={{
+                padding: 10,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+              }}
+            />
+
+            <select
+              name="category"
+              value={ticket.category}
+              onChange={handleChange}
+              style={{
+                padding: 10,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+              }}
+            >
+              <option>Hardware</option>
+              <option>Software</option>
+              <option>Network</option>
+              <option>Access Issues</option>
+              <option>Other</option>
+            </select>
+
+            <textarea
+              name="description"
+              placeholder="Describe your issue..."
+              value={ticket.description}
+              onChange={handleChange}
+              rows={4}
+              required
+              style={{
+                padding: 10,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+              }}
+            />
+
+            <button
+              type="submit"
+              style={{
+                padding: "10px 15px",
+                background: "#004080",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+              }}
+            >
+              Submit Ticket
+            </button>
+          </form>
         </section>
 
         {/* FAQ */}
-        <section id="faq" style={{ marginBottom: 40 }}>
-          <h2 style={{ color: "#004080" }}>Frequently Asked Questions (FAQ)</h2>
-          <dl>
-            <dt style={{ fontWeight: "bold", marginTop: 15 }}>How do I reset my password?</dt>
-            <dd style={{ marginLeft: 20, marginBottom: 15 }}>
-              Use the <a href="#" style={{ color: "#004080" }}>Password Reset Portal</a> or contact the helpdesk for assistance.
-            </dd>
-
-            <dt style={{ fontWeight: "bold", marginTop: 15 }}>How do I connect to the company Wi-Fi?</dt>
-            <dd style={{ marginLeft: 20, marginBottom: 15 }}>
-              Follow the instructions in our <a href="#" style={{ color: "#004080" }}>Wi-Fi Setup Guide</a> or contact support if you experience issues.
-            </dd>
-
-            <dt style={{ fontWeight: "bold", marginTop: 15 }}>How do I install approved software?</dt>
-            <dd style={{ marginLeft: 20, marginBottom: 15 }}>
-              Request software installation through the ticketing system with the software name and justification.
-            </dd>
-
-            <dt style={{ fontWeight: "bold", marginTop: 15 }}>Who do I contact if my computer is running slow?</dt>
-            <dd style={{ marginLeft: 20, marginBottom: 15 }}>
-              Submit a ticket under “Hardware Performance” or call the helpdesk for immediate troubleshooting.
-            </dd>
-
-            <dt style={{ fontWeight: "bold", marginTop: 15 }}>What should I do if I receive a suspicious email?</dt>
-            <dd style={{ marginLeft: 20, marginBottom: 15 }}>
-              Do not open links or attachments and immediately report the email to{" "}
-              <a href="mailto:support@anqad.com" style={{ color: "#004080" }}>support@anqad.com</a>.
-            </dd>
-          </dl>
-        </section>
-
-        {/* Troubleshooting Guides */}
-        <section id="troubleshooting-guides" style={{ marginBottom: 40 }}>
-          <h2 style={{ color: "#004080" }}>Troubleshooting Guides</h2>
-          <h3>Common Issues and Solutions</h3>
-
-          <h4>Cannot connect to VPN</h4>
-          <ul>
-            <li>Check your internet connection</li>
-            <li>Verify VPN credentials</li>
-            <li>Restart your VPN client</li>
-            <li>If issues persist, submit a ticket with error screenshots</li>
-          </ul>
-
-          <h4>Printer not responding</h4>
-          <ul>
-            <li>Ensure printer is powered on and connected</li>
-            <li>Restart printer and your computer</li>
-            <li>Check for paper jams or low ink</li>
-            <li>Contact helpdesk if unresolved</li>
-          </ul>
-
-          <h4>Email not syncing on mobile device</h4>
-          <ul>
-            <li>Verify correct email settings (IMAP/Exchange)</li>
-            <li>Remove and re-add your email account</li>
-            <li>Restart the device</li>
-            <li>Submit a ticket if the problem continues</li>
-          </ul>
-
+        <section style={{ marginBottom: 30 }}>
+          <h2 style={{ color: "#004080" }}>Quick FAQ</h2>
           <p>
-            <a
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "inline-block",
-                marginTop: 10,
-                padding: "8px 15px",
-                backgroundColor: "#004080",
-                color: "white",
-                borderRadius: 4,
-                textDecoration: "none",
-              }}
-            >
-              View all Troubleshooting Guides
+            <strong>Password reset?</strong> Use the{" "}
+            <a href="#" style={{ color: "#004080" }}>
+              Reset Portal
             </a>
+            .
           </p>
-        </section>
-
-        {/* Software and Hardware Support */}
-        <section id="software-hardware-support" style={{ marginBottom: 40 }}>
-          <h2 style={{ color: "#004080" }}>Software and Hardware Support</h2>
-          <p>Our IT team supports a range of company-approved software and hardware, including but not limited to:</p>
-          <ul>
-            <li><strong>Software:</strong> Office 365, Slack, Zoom, VPN clients, antivirus, and custom internal apps</li>
-            <li><strong>Hardware:</strong> Laptops, desktops, printers, scanners, network devices</li>
-          </ul>
           <p>
-            If you require new hardware or software, please submit a request through the ticketing system. All requests are reviewed for compliance with company IT policies.
+            <strong>Wi-Fi setup?</strong> Check the{" "}
+            <a href="#" style={{ color: "#004080" }}>
+              Wi-Fi Guide
+            </a>
+            .
           </p>
-        </section>
-
-        {/* Remote Support */}
-        <section id="remote-support" style={{ marginBottom: 40 }}>
-          <h2 style={{ color: "#004080" }}>Remote Support</h2>
           <p>
-            If you need direct assistance, our technicians can remotely access your device with your permission. Please contact the helpdesk to schedule a remote support session.
+            <strong>Suspicious email?</strong> Report to{" "}
+            <a href="mailto:support@anqad.com" style={{ color: "#004080" }}>
+              support@anqad.com
+            </a>
+            .
           </p>
-        </section>
-
-        {/* Service Hours */}
-        <section id="service-hours" style={{ marginBottom: 40 }}>
-          <h2 style={{ color: "#004080" }}>Service Hours</h2>
-          <ul>
-            <li><strong>Support Desk:</strong> Monday – Friday, 8:00 AM – 6:00 PM</li>
-            <li><strong>Emergency Support:</strong> 24/7 for critical issues via phone</li>
-          </ul>
         </section>
       </main>
 
-      <footer style={{ textAlign: "center", marginTop: 40, marginBottom: 20, color: "#666", fontSize: "0.9em" }}>
+      {/* Footer */}
+      <footer
+        style={{
+          textAlign: "center",
+          marginTop: 40,
+          marginBottom: 20,
+          color: "#666",
+          fontSize: "0.9em",
+        }}
+      >
         &copy; 2025 Adept Technologies. All rights reserved.
       </footer>
     </div>

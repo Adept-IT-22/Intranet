@@ -1,38 +1,18 @@
-# serializers.py
 from rest_framework import serializers
-from django.contrib.auth import authenticate
-from .models import CustomUser
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
+from chat.models import ChatMessage  # ✅ Import ChatMessage instead
 
-class RegisterSerializer(serializers.ModelSerializer):
+User = get_user_model()
+
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CustomUser
-        fields = ['username', 'email', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
+        model = User
+        fields = ["id", "username", "email"]
 
-    def create(self, validated_data):
-        user = CustomUser.objects.create_user(**validated_data)
-        return user
+class MessageSerializer(serializers.ModelSerializer):
+    sender = serializers.CharField(source="sender.username")
+    receiver = serializers.CharField(source="receiver.username")
 
-class LoginSerializer(serializers.Serializer):
-    login = serializers.CharField()
-    password = serializers.CharField()
-
-    def validate(self, data):
-        user = authenticate(username=data['login'], password=data['password'])
-        if not user:
-            # Try login by email
-            try:
-                user = CustomUser.objects.get(email=data['login'])
-                user = authenticate(username=user.username, password=data['password'])
-            except CustomUser.DoesNotExist:
-                pass
-        if not user:
-            raise serializers.ValidationError("Invalid credentials")
-
-        refresh = RefreshToken.for_user(user)
-        return {
-            'token': str(refresh.access_token),
-            'username': user.username,
-            'email': user.email
-        }
+    class Meta:
+        model = ChatMessage  # ✅ Use ChatMessage model
+        fields = ["id", "sender", "receiver", "message", "timestamp"]  # ✅ Use 'message' field

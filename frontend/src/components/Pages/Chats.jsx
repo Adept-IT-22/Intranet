@@ -1,98 +1,171 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Send, Mic, Paperclip } from 'lucide-react';
-import './chats.css';
+import { useState, useEffect, useRef } from "react";
+import { Plus, Send, Mic, Paperclip } from "lucide-react";
+import "./chats.css";
+
+const API_BASE = "http://127.0.0.1:8000/api/chat";
 
 const Chats = () => {
-  const [selectedChat, setSelectedChat] = useState('Marketing Team');
-  const [message, setMessage] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [message, setMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  const colleagues = [
-    { id: 1, name: 'Fuji', avatar: '🌊', online: true },
-    { id: 2, name: 'Ann', avatar: '🏔️', online: true },
-    { id: 3, name: 'Mark', avatar: '🔥', online: false }
-  ];
-
-  const recentChats = [
-    { id: 1, name: 'Marketing Team', type: 'team', unread: 2 },
-    { id: 2, name: 'Matthew Wachira', type: 'individual', unread: 0 },
-    { id: 3, name: 'Frank Ochieng', type: 'individual', unread: 0 }
-  ];
-
-  const initialMessages = {
-    'Marketing Team': [
-      {
-        id: 1,
-        sender: 'Ann',
-        avatar: '🏔️',
-        content: "Hello! I've been thinking about developing some new skills. Any suggestions on where to start?",
-        time: '10:30 AM',
-        isMe: false
-      },
-      {
-        id: 2,
-        sender: 'Fuji',
-        avatar: '🌊',
-        content: "Hi there! That's great to hear. The first step is to identify your interests. What areas are you passionate about or curious to explore?",
-        time: '10:32 AM',
-        isMe: false
-      }
-    ],
-    'Matthew Wachira': [],
-    'Frank Ochieng': []
-  };
-
-  const [chatMessages, setChatMessages] = useState(() => {
-    const saved = localStorage.getItem('chatMessages');
-    return saved ? JSON.parse(saved) : initialMessages;
-  });
-
+  const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
+  // ✅ Fetch logged-in user & user list on mount
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return console.error("❌ No token found. Please log in.");
+
+    // Logged-in user
+    fetch("http://127.0.0.1:8000/api/auth/user/", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setCurrentUser(data.username))
+      .catch((err) => console.error("❌ Error fetching user:", err));
+
+    fetchUsers();
+  }, []);
+
+  // ✅ Fetch users list with last_message + unread_count
+  const fetchUsers = () => {
+    const token = localStorage.getItem("access_token");
+    fetch(`${API_BASE}/users/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setUsers(data))
+      .catch((err) => console.error("❌ Failed to fetch users:", err));
+  };
+
+  // ✅ Scroll chat to bottom when messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages[selectedChat]]);
+
+  // ✅ Connect WebSocket when selecting a chat
+  useEffect(() => {
+    if (!selectedChat || !currentUser) return;
+
+    const token = localStorage.getItem("access_token");
+    const roomName = [currentUser, selectedChat].sort().join("_");
+    const wsUrl = `ws://127.0.0.1:8000/ws/chat/${roomName}/?token=${token}`;
+
+    // ✅ Fetch chat history when chat opens
+    fetchChatHistory(selectedChat);
+
+    console.log("🔗 Connecting WebSocket:", wsUrl);
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+
+    socket.onopen = () => console.log("✅ WebSocket connected");
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      const newMsg = {
+        id: crypto.randomUUID(),
+        sender: data.sender,
+        content: data.message,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isMe: data.sender === currentUser,
+        avatar: data.sender === currentUser ? "👤" : "💬",
+      };
+
+      setChatMessages((prev) => ({
+        ...prev,
+        [selectedChat]: [...(prev[selectedChat] || []), newMsg],
+      }));
+
+      // ✅ Refresh users list for unread/last message update
+      fetchUsers();
+    };
+
+    socket.onclose = () => console.log("❌ WebSocket closed");
+
+    // ✅ Mark all messages as read when opening chat
+    markMessagesAsRead(selectedChat);
+
+    return () => socket.close();
+  }, [selectedChat, currentUser]);
+
+  // ✅ Fetch chat history for selected user
+  const fetchChatHistory = (username) => {
+    const token = localStorage.getItem("access_token");
+    fetch(`${API_BASE}/history/${username}/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.map((msg) => ({
+          id: msg.id,
+          sender: msg.sender,
+          content: msg.content,
+          time: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isMe: msg.sender === currentUser,
+          avatar: msg.sender === currentUser ? "👤" : "💬",
+        }));
+        setChatMessages((prev) => ({ ...prev, [username]: formatted }));
+      })
+      .catch((err) => console.error("❌ Failed to load chat history:", err));
+  };
+
+  // ✅ Mark all messages as read
+  const markMessagesAsRead = (username) => {
+    const token = localStorage.getItem("access_token");
+    fetch(`${API_BASE}/mark-read/${username}/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(() => fetchUsers()) // ✅ Refresh sidebar badges
+      .catch((err) => console.error("❌ Failed to mark as read:", err));
+  };
+
+  // ✅ Send message via WebSocket
   const sendMessage = () => {
-    if (message.trim()) {
-      const newMessage = {
-        id: (chatMessages[selectedChat]?.length || 0) + 1,
-        sender: 'You',
-        avatar: '👤',
-        content: message,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isMe: true
-      };
+    if (!message.trim()) return;
 
-      const updatedMessages = {
-        ...chatMessages,
-        [selectedChat]: [...(chatMessages[selectedChat] || []), newMessage]
-      };
-
-      setChatMessages(updatedMessages);
-      localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
-      setMessage('');
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      console.error("❌ WebSocket not connected!");
+      return;
     }
+
+    const payload = {
+      sender: currentUser,
+      receiver: selectedChat,
+      message: message.trim(),
+    };
+
+    socketRef.current.send(JSON.stringify(payload));
+    setMessage("");
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages[selectedChat]]);
-
-  const filteredChats = recentChats.filter(chat =>
-    chat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ Filter out current user + apply search
+  const filteredUsers = users
+    .filter((u) => u.username !== currentUser) // ✅ Exclude self
+    .filter((u) => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="chat-container">
+      {/* ✅ Sidebar */}
       <div className="chat-sidebar">
         <div className="chat-header">
           <div className="chat-header-left">
-            <div className="chat-logo"><span>✨</span></div>
+            <div className="chat-logo">
+              <span>✨</span>
+            </div>
             <h1>Chat</h1>
           </div>
           <button className="create-chat-btn" title="Create new chat">
@@ -104,108 +177,121 @@ const Chats = () => {
         <div className="search-bar">
           <input
             type="text"
-            placeholder="Search chats..."
+            placeholder="Search users..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="colleagues-section">
-          <h2>My Colleagues</h2>
-          <div className="colleagues-list">
-            {colleagues.map(c => (
-              <div key={c.id} className="colleague-item">
-                <div className="colleague-avatar-wrapper">
-                  <div className="colleague-avatar">{c.avatar}</div>
-                  {c.online && <div className="online-indicator"></div>}
-                </div>
-                <span className="colleague-name">{c.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
+        {/* ✅ Users list */}
         <div className="recent-chats-section">
-          <h2>Chats</h2>
+          <h2>Users</h2>
           <div className="recent-chats-list">
-            {filteredChats.map(chat => (
-              <div
-                key={chat.id}
-                onClick={() => setSelectedChat(chat.name)}
-                className={`chat-item ${selectedChat === chat.name ? 'selected' : ''}`}
-              >
-                <div className="chat-avatar">
-                  <span>{chat.type === 'team' ? '👥' : '👤'}</span>
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
+                <div
+                  key={user.id}
+                  onClick={() => setSelectedChat(user.username)}
+                  className={`chat-item ${selectedChat === user.username ? "selected" : ""}`}
+                >
+                  <div className="chat-avatar">
+                    <span>👤</span>
+                  </div>
+                  <div className="chat-info">
+                    <p className="chat-name">{user.username}</p>
+
+                    {/* ✅ Last message preview */}
+                    <p className="chat-last-msg">
+                      {user.last_message ? user.last_message.slice(0, 25) : "No messages yet"}
+                    </p>
+                  </div>
+
+                  {/* ✅ Unread badge */}
+                  {user.unread_count > 0 && (
+                    <span className="unread-badge">{user.unread_count}</span>
+                  )}
                 </div>
-                <div className="chat-info">
-                  <p className="chat-name">{chat.name}</p>
-                </div>
-                {chat.unread > 0 && <div className="unread-badge">{chat.unread}</div>}
-              </div>
-            ))}
+              ))
+            ) : (
+              <div style={{ padding: "10px" }}>No users found</div>
+            )}
           </div>
         </div>
       </div>
 
+      {/* ✅ Chat Window */}
       <div className="chat-main">
-        <div className="chat-main-header">
-          <div className="chat-main-header-content">
-            <div className="current-chat-avatar"><span>{selectedChat[0]}</span></div>
-            <div className="current-chat-info">
-              <h2>{selectedChat}</h2>
-              <p>{selectedChat === 'Marketing Team' ? '3 members online' : 'Active now'}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="messages-container">
-          {(chatMessages[selectedChat] || []).map(msg => (
-            <div key={msg.id} className={`message-wrapper ${msg.isMe ? 'my-message' : 'other-message'}`}>
-              <div className="message-content">
-                <div className="message-avatar">{msg.avatar}</div>
-                <div className="message-bubble-wrapper">
-                  <div className={`message-bubble ${msg.isMe ? 'my-bubble' : 'other-bubble'}`}>
-                    <p>{msg.content}</p>
-                  </div>
-                  <p className="message-info">{msg.sender} • {msg.time}</p>
+        {selectedChat ? (
+          <>
+            <div className="chat-main-header">
+              <div className="chat-main-header-content">
+                <div className="current-chat-avatar">
+                  <span>{selectedChat[0]}</span>
+                </div>
+                <div className="current-chat-info">
+                  <h2>{selectedChat}</h2>
+                  <p>Active now</p>
                 </div>
               </div>
             </div>
-          ))}
-          {isTyping && <div className="typing-indicator">Typing...</div>}
-          <div ref={messagesEndRef} />
-        </div>
 
-        <div className="message-input-container">
-          <div className="message-input-wrapper">
-            <button className="input-icon-btn" title="Attachment (coming soon)" disabled>
-              <Paperclip size={20} />
-            </button>
-            <textarea
-              value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                setIsTyping(true);
-                setTimeout(() => setIsTyping(false), 1000);
-              }}
-              onKeyPress={handleKeyPress}
-              placeholder="Message"
-              className="message-input"
-              rows={1}
-            />
-            <button className="input-icon-btn" title="Voice message (coming soon)" disabled>
-              <Mic size={20} />
-            </button>
-            <button
-              onClick={sendMessage}
-              className={`send-btn ${!message.trim() ? 'disabled' : ''}`}
-              disabled={!message.trim()}
-              title="Send"
-            >
-              <Send size={20} />
-            </button>
-          </div>
-        </div>
+            <div className="messages-container">
+              {(chatMessages[selectedChat] || []).map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`message-wrapper ${msg.isMe ? "my-message" : "other-message"}`}
+                >
+                  <div className="message-content">
+                    <div className="message-avatar">{msg.avatar}</div>
+                    <div className="message-bubble-wrapper">
+                      <div className={`message-bubble ${msg.isMe ? "my-bubble" : "other-bubble"}`}>
+                        <p>{msg.content}</p>
+                      </div>
+                      <p className="message-info">
+                        {msg.sender} • {msg.time}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {isTyping && <div className="typing-indicator">Typing...</div>}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="message-input-container">
+              <div className="message-input-wrapper">
+                <button className="input-icon-btn" title="Attachment" disabled>
+                  <Paperclip size={20} />
+                </button>
+                <textarea
+                  value={message}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    setIsTyping(true);
+                    setTimeout(() => setIsTyping(false), 1000);
+                  }}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Message"
+                  className="message-input"
+                  rows={1}
+                />
+                <button className="input-icon-btn" title="Voice" disabled>
+                  <Mic size={20} />
+                </button>
+                <button
+                  onClick={sendMessage}
+                  className={`send-btn ${!message.trim() ? "disabled" : ""}`}
+                  disabled={!message.trim()}
+                  title="Send"
+                >
+                  <Send size={20} />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div style={{ padding: "20px" }}>👈 Select a user to start chatting</div>
+        )}
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ const LMSPage = () => {
             rel="noopener noreferrer"
             style={styles.websiteLink}
           >
-            Visit Nexen LMS
+            Visit School LMS
           </a>
           <a
             href="https://learn.adept-techno.co.ke/"

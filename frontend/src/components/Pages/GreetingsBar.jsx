@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export default function GreetingsBar() {
+export default function GreetingsBar({ username }) {
   const [greeting, setGreeting] = useState("");
 
   useEffect(() => {
@@ -27,12 +27,13 @@ export default function GreetingsBar() {
         fontSize: "16px",
         borderRadius: "8px",
         marginBottom: "20px",
-        width: "100%",       // stretch full width of parent container
+        width: "100%",
         boxSizing: "border-box",
-        textAlign: "left",   // keep greeting text left aligned
+        textAlign: "left",
       }}
     >
       {greeting}
+      {username ? `, ${username}!` : "!"}
     </div>
   );
 }

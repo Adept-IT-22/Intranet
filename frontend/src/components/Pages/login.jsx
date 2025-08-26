@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api"; // 🔁 Add your deployed backend URL in .env
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 const LoginSignup = () => {
   const navigate = useNavigate();
@@ -35,20 +35,37 @@ const LoginSignup = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include", // Recommended for CORS + JWT auth
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        const token = isLogin ? data.access : data.token;
-        localStorage.setItem("token", token);
-        navigate("/dashboard");
+        if (isLogin) {
+          // ✅ Store JWT tokens correctly for Django SimpleJWT
+          localStorage.setItem("access_token", data.access);
+          localStorage.setItem("refresh_token", data.refresh);
+
+          // ✅ Check if we have a redirect path saved
+          const redirectTo =
+            sessionStorage.getItem("redirect_after_login") || "/dashboard";
+
+          // ✅ Clear it so it doesn’t persist for next login
+          sessionStorage.removeItem("redirect_after_login");
+
+          // ✅ Navigate to the intended page
+          navigate(redirectTo);
+        } else {
+          // ✅ After signup, tell user to login
+          alert("✅ Account created successfully! Please log in.");
+          setIsLogin(true);
+        }
       } else {
-        alert(data.detail || data.error || "Something went wrong");
+        alert(data.detail || data.error || "❌ Something went wrong");
       }
     } catch (err) {
+      console.error("❌ Network error:", err);
       alert("Network error. Try again.");
     } finally {
       setLoading(false);
