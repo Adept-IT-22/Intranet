@@ -11,51 +11,52 @@ const Chats = () => {
   const [message, setMessage] = useState("");
   const [chatMessages, setChatMessages] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
 
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
-  // Fetch logged-in user & user list on mount
+  const token = localStorage.getItem("access_token");
+  if (!token) console.warn("No JWT token found in localStorage.");
+
+  // Fetch logged-in user & user list
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return console.error("❌ No token found. Please log in.");
+    if (!token) return;
 
-    fetch("http://127.0.0.1:8000/api/auth/user/", {
+    fetch(`${API_BASE.replace("/chat","")}/auth/user/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
-      .then((data) => setCurrentUser(data.username))
-      .catch((err) => console.error("❌ Error fetching user:", err));
+      .then(res => res.json())
+      .then(data => setCurrentUser(data.username))
+      .catch(err => console.error("Error fetching user:", err));
 
     fetchUsers();
-  }, []);
+  }, [token]);
 
   const fetchUsers = () => {
-    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
     fetch(`${API_BASE}/users/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
-      .then((data) => setUsers(data))
-      .catch((err) => console.error("❌ Failed to fetch users:", err));
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error("Failed to fetch users:", err));
   };
 
-  // Scroll chat to bottom
+  // Scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages[selectedChat]]);
 
-  // WebSocket connection
+  // WebSocket connection for selected chat
   useEffect(() => {
-    if (!selectedChat || !currentUser) return;
-
-    const token = localStorage.getItem("access_token");
-    const roomName = [currentUser, selectedChat].sort().join("_");
-    const wsUrl = `ws://127.0.0.1:8000/ws/chat/${roomName}/?token=${token}`;
+    if (!selectedChat || !currentUser || !token) return;
 
     fetchChatHistory(selectedChat);
 
+    const wsUrl = `ws://127.0.0.1:8000/ws/chat/${selectedChat}/?token=${token}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
@@ -64,36 +65,49 @@ const Chats = () => {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      const newMsg = {
-        id: crypto.randomUUID(),
-        sender: data.sender,
-        content: data.message,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        isMe: data.sender === currentUser,
-        avatar: data.sender === currentUser ? "👤" : "💬",
-      };
+      if (data.type === "chat_message") {
+        setChatMessages(prev => {
+          const msgs = prev[selectedChat] || [];
 
-      setChatMessages((prev) => ({
-        ...prev,
-        [selectedChat]: [...(prev[selectedChat] || []), newMsg],
-      }));
+          // Skip duplicates if temp_id exists
+          if (data.temp_id && msgs.some(m => m.id === data.temp_id)) return prev;
 
-      fetchUsers();
+          const newMsg = {
+            id: data.temp_id || crypto.randomUUID(),
+            sender: data.sender,
+            content: data.message,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isMe: data.sender === currentUser,
+            avatar: data.sender === currentUser ? "👤" : "💬",
+          };
+
+          return { ...prev, [selectedChat]: [...msgs, newMsg] };
+        });
+      }
+
+      if (data.type === "typing") {
+        setTypingUsers(prev => [...new Set([...prev, data.sender])]);
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+          setTypingUsers(prev => prev.filter(u => u !== data.sender));
+        }, 1500);
+      }
+
+      fetchUsers(); // Optional: update unread counts
     };
 
     socket.onclose = () => console.log("❌ WebSocket closed");
 
     return () => socket.close();
-  }, [selectedChat, currentUser]);
+  }, [selectedChat, currentUser, token]);
 
   const fetchChatHistory = (username) => {
-    const token = localStorage.getItem("access_token");
     fetch(`${API_BASE}/history/${username}/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
-      .then((data) => {
-        const formatted = data.map((msg) => ({
+      .then(res => res.json())
+      .then(data => {
+        const formatted = data.map(msg => ({
           id: msg.id,
           sender: msg.sender,
           content: msg.content,
@@ -101,43 +115,42 @@ const Chats = () => {
           isMe: msg.sender === currentUser,
           avatar: msg.sender === currentUser ? "👤" : "💬",
         }));
-        setChatMessages((prev) => ({ ...prev, [username]: formatted }));
+        setChatMessages(prev => ({ ...prev, [username]: formatted }));
       })
-      .catch((err) => console.error("❌ Failed to load chat history:", err));
+      .catch(err => console.error("Failed to load chat history:", err));
   };
 
   const sendMessage = () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
 
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      console.error("❌ WebSocket not connected!");
-      return;
-    }
-
+    const tempId = crypto.randomUUID(); // temp id for optimistic update
     const payload = {
+      type: "chat_message",
       sender: currentUser,
       receiver: selectedChat,
       message: message.trim(),
+      temp_id: tempId,
     };
 
-    socketRef.current.send(JSON.stringify(payload));
-    setMessage("");
-
-    // Update local chat immediately
-    setChatMessages((prev) => ({
+    // Optimistic update
+    setChatMessages(prev => ({
       ...prev,
       [selectedChat]: [
         ...(prev[selectedChat] || []),
         {
-          id: crypto.randomUUID(),
+          id: tempId,
           sender: currentUser,
           content: payload.message,
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           isMe: true,
           avatar: "👤",
+          temp: true,
         },
       ],
     }));
+
+    socketRef.current.send(JSON.stringify(payload));
+    setMessage("");
   };
 
   const handleKeyPress = (e) => {
@@ -145,11 +158,19 @@ const Chats = () => {
       e.preventDefault();
       sendMessage();
     }
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: "typing",
+        sender: currentUser,
+        receiver: selectedChat,
+      }));
+    }
   };
 
   const filteredUsers = users
-    .filter((u) => u.username !== currentUser)
-    .filter((u) => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
+    .filter(u => u.username !== currentUser)
+    .filter(u => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="chat-container">
@@ -170,7 +191,7 @@ const Chats = () => {
             type="text"
             placeholder="Search users..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
 
@@ -178,7 +199,7 @@ const Chats = () => {
           <h2>Users</h2>
           <div className="recent-chats-list">
             {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
+              filteredUsers.map(user => (
                 <div
                   key={user.id}
                   onClick={() => setSelectedChat(user.username)}
@@ -187,7 +208,7 @@ const Chats = () => {
                   <div className="chat-avatar"><span>👤</span></div>
                   <div className="chat-info">
                     <p className="chat-name">{user.username}</p>
-                    <p className="chat-last-msg">{user.last_message ? user.last_message.slice(0, 25) : "No messages yet"}</p>
+                    <p className="chat-last-msg">{user.last_message?.slice(0, 25) || "No messages yet"}</p>
                   </div>
                   {user.unread_count > 0 && <span className="unread-badge">{user.unread_count}</span>}
                 </div>
@@ -206,13 +227,14 @@ const Chats = () => {
                 <div className="current-chat-avatar"><span>{selectedChat[0]}</span></div>
                 <div className="current-chat-info">
                   <h2>{selectedChat}</h2>
-                  <p>Active now</p>
+                  {typingUsers.includes(selectedChat) && <p>Typing...</p>}
+                  {typingUsers.length === 0 && <p>Active now</p>}
                 </div>
               </div>
             </div>
 
             <div className="messages-container">
-              {(chatMessages[selectedChat] || []).map((msg) => (
+              {(chatMessages[selectedChat] || []).map(msg => (
                 <div key={msg.id} className={`message-wrapper ${msg.isMe ? "my-message" : "other-message"}`}>
                   <div className="message-content">
                     <div className="message-avatar">{msg.avatar}</div>
@@ -225,7 +247,6 @@ const Chats = () => {
                   </div>
                 </div>
               ))}
-              {isTyping && <div className="typing-indicator">Typing...</div>}
               <div ref={messagesEndRef} />
             </div>
 
@@ -234,11 +255,7 @@ const Chats = () => {
                 <button className="input-icon-btn" title="Attachment" disabled><Paperclip size={20} /></button>
                 <textarea
                   value={message}
-                  onChange={(e) => {
-                    setMessage(e.target.value);
-                    setIsTyping(true);
-                    setTimeout(() => setIsTyping(false), 1000);
-                  }}
+                  onChange={e => setMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Message"
                   className="message-input"

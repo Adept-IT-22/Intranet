@@ -1,77 +1,94 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-from .models import ChatMessage
+from chat.models import ChatMessage
 
 User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.username = self.scope['url_route']['kwargs']['username']  # the other user
-        self.user = self.scope["user"]
-        self.room_name = f"chat_{min(self.user.username, self.username)}_{max(self.user.username, self.username)}"
-        self.room_group_name = f"chat_{self.room_name}"
+        # The "username" is passed in the URL via routing.py
+        self.chat_username = self.scope['url_route']['kwargs']['username']
+        self.room_group_name = f'chat_{self.chat_username}'
 
-        # Join room group
+        # Join the user-specific group
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
-
         await self.accept()
 
-        # Mark all messages from the other user as read when connecting
-        await self.mark_messages_as_read()
-
     async def disconnect(self, close_code):
+        # Leave the group on disconnect
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
 
-    # Receive message from WebSocket
     async def receive(self, text_data):
         data = json.loads(text_data)
-        message = data['message']
-        receiver_username = data['receiver']
+        msg_type = data.get('type')
+        sender = data.get('sender')
+        receiver = data.get('receiver')
 
-        receiver = await self.get_user(receiver_username)
+        if msg_type == "chat_message":
+            message = data.get('message')
 
-        # Save message in DB
-        chat_msg = ChatMessage.objects.create(
-            sender=self.user,
-            receiver=receiver,
-            message=message,
-            is_read=False
-        )
+            # Save the message in DB
+            await self.save_message(sender, receiver, message)
 
-        # Send message to room group
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'chat_message',
-                'message': message,
-                'sender': self.user.username,
-                'receiver': receiver.username,
-                'timestamp': str(chat_msg.timestamp),
-            }
-        )
+            # Send to receiver group
+            await self.channel_layer.group_send(
+                f'chat_{receiver}',
+                {
+                    'type': 'chat_message',
+                    'message': message,
+                    'sender': sender,
+                }
+            )
 
-    # Receive message from room group
+            # Echo back to sender (so they see it immediately if needed)
+            await self.channel_layer.group_send(
+                f'chat_{sender}',
+                {
+                    'type': 'chat_message',
+                    'message': message,
+                    'sender': sender,
+                }
+            )
+
+        elif msg_type == "typing":
+            # Notify the receiver that the sender is typing
+            await self.channel_layer.group_send(
+                f'chat_{receiver}',
+                {
+                    'type': 'typing',
+                    'sender': sender,
+                }
+            )
+
+    # --- Event Handlers for messages coming from group_send ---
     async def chat_message(self, event):
-        await self.send(text_data=json.dumps(event))
+        await self.send(text_data=json.dumps({
+            'type': 'chat_message',
+            'message': event['message'],
+            'sender': event['sender'],
+        }))
 
-    # Mark messages as read
-    async def mark_messages_as_read(self):
-        from asgiref.sync import sync_to_async
+    async def typing(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'typing',
+            'sender': event['sender'],
+        }))
 
-        @sync_to_async
-        def mark_read():
-            other_user = User.objects.get(username=self.username)
-            ChatMessage.objects.filter(sender=other_user, receiver=self.user, is_read=False).update(is_read=True)
-
-        await mark_read()
-
-    @sync_to_async
-    def get_user(self, username):
-        return User.objects.get(username=username)
+    # --- DB helper ---
+    @database_sync_to_async
+    def save_message(self, sender_username, receiver_username, message):
+        sender = User.objects.get(username=sender_username)
+        receiver = User.objects.get(username=receiver_username)
+        return ChatMessage.objects.create(
+            sender=sender,
+            receiver=receiver,
+            message=message  # ✅ use correct field
+        )
