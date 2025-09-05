@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, Send, Mic, Paperclip } from "lucide-react";
-import "./chats.css";
+import "./Chats.css"; 
 
 const API_BASE = "http://127.0.0.1:8000/api/chat";
 

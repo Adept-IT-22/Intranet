@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const employeesData = [
   {
@@ -25,11 +25,19 @@ const employeesData = [
     email: "carol@example.com",
     photo: "https://randomuser.me/api/portraits/women/65.jpg",
   },
-  // Add more employees here
 ];
 
 export default function EmployeeDirectory() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [loadingImages, setLoadingImages] = useState({});
+
+  const handleImageLoad = (id) => {
+    setLoadingImages((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const handleImageStart = (id) => {
+    setLoadingImages((prev) => ({ ...prev, [id]: true }));
+  };
 
   const filteredEmployees = employeesData.filter((emp) => {
     const term = searchTerm.toLowerCase();
@@ -75,11 +83,37 @@ export default function EmployeeDirectory() {
                 textAlign: "center",
               }}
             >
-              <img
-                src={emp.photo}
-                alt={emp.name}
-                style={{ width: 80, height: 80, borderRadius: "50%" }}
-              />
+              {/* ✅ Photo with skeleton loader */}
+              <div style={{ position: "relative", width: 80, height: 80, margin: "auto" }}>
+                {loadingImages[emp.id] && (
+                  <div
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      background:
+                        "linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%)",
+                      backgroundSize: "200% 100%",
+                      animation: "skeleton 1.5s infinite",
+                    }}
+                  ></div>
+                )}
+                <img
+                  src={emp.photo}
+                  alt={emp.name}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    display: loadingImages[emp.id] ? "none" : "block",
+                  }}
+                  onLoad={() => handleImageLoad(emp.id)}
+                  onError={() => handleImageLoad(emp.id)}
+                  onLoadStart={() => handleImageStart(emp.id)}
+                />
+              </div>
+
               <h3 style={{ margin: "0.5rem 0" }}>{emp.name}</h3>
               <p style={{ margin: 0, fontWeight: "bold" }}>{emp.role}</p>
               <p style={{ margin: "0.25rem 0", color: "#555" }}>
@@ -94,6 +128,16 @@ export default function EmployeeDirectory() {
           <p>No employees found.</p>
         )}
       </div>
+
+      {/* Skeleton animation keyframes */}
+      <style>
+        {`
+          @keyframes skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `}
+      </style>
     </div>
   );
 }

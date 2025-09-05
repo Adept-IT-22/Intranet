@@ -23,6 +23,8 @@ urlpatterns = [
     path("api/", include("events.urls")),
     path("api/support/", include("support.urls")),
     path('api/chat/', include('chat.urls')),
+   
+
 ]
 
 # Serve media in dev

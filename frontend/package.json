@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "homepage": "https://github.com/Adept-IT-22/Intranet.git",
+  "homepage": ".",
   "type": "module",
   "scripts": {
     "dev": "vite",

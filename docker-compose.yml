@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    container_name: intranet-backend
+    command: >
+      sh -c "
+      pip install django-ngrok ngrok &&
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=backend.settings
+      - NGROK_AUTH_TOKEN=328yKQblyTdYYT8nvHiOLLjIplu_2N6NpqMXV7iV6dWiDVFNc
+      - CSRF_TRUSTED_ORIGINS=http://localhost:80,${NGROK_FRONTEND_URL}
+  
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+   build:
+    context: ./frontend
+    dockerfile: Dockerfile
+   container_name: intranet-frontend
+   ports:
+    - "80:80"   
+   depends_on:
+    - backend
+
+  
+  db:
+    image: postgres:15.7
+    container_name: intranet-db
+    restart: always
+    environment:
+      POSTGRES_DB: intranetdb
+      POSTGRES_USER: intranetuser
+      POSTGRES_PASSWORD: intranetpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+
+      
+  redis:
+    image: redis:7-alpine
+    container_name: intranet-redis
+    ports:
+      - "6379:6379"   
+
+volumes:
+  postgres_data:
