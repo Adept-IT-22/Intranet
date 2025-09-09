@@ -1,0 +1,37 @@
+﻿version: "3.8"
+services:
+  backend:
+    image: adeptintranetacr.azurecr.io/intranet-backend:v1
+    restart: always
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: intranet
+      DB_USER: intranet
+      DB_PASSWORD: intranetpass
+      ALLOWED_HOSTS: "adept-intranet.azurewebsites.net,localhost,127.0.0.1"
+      CSRF_TRUSTED_ORIGINS: "https://adept-intranet.azurewebsites.net"
+    command: >
+      sh -lc "python manage.py migrate --noinput &&
+              gunicorn -b 0.0.0.0:8000 config.asgi:application -k uvicorn.workers.UvicornWorker"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "80:8000"
+
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_DB: intranet
+      POSTGRES_USER: intranet
+      POSTGRES_PASSWORD: intranetpass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intranet -d intranet -h localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - ${WEBAPP_STORAGE_HOME}/dbdata:/var/lib/postgresql/data
