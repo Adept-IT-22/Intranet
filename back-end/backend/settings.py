@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     "chat",
     "documents",
     "events",
-    "support",
+    "support.apps.SupportConfig",
 
     # Third-party
     "corsheaders",
@@ -123,7 +123,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("redis", 6379)],
+            "hosts": [("127.0.0.1", 6379)],  
         },
     },
 }
@@ -157,4 +157,4 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-ADMIN_EMAILS = ["ann.ndiga@adept-techno.com"]
+ADMIN_EMAILS = ["it@adept-techno.com"]
