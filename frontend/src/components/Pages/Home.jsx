@@ -68,15 +68,29 @@ function HomePage({ navigateTo }) {
       },
       {
         question: "What if I don't receive the password reset email?",
-        answer: "Check your spam folder first. If still not found, contact IT support at extension 1234.",
+        answer: "Check your spam folder first. If still not found, contact IT support at it@adept-techno.com.",
       },
     ],
     "Leave Requests": [
-      {
-        question: "How to submit a leave request?",
-        answer: "Navigate to HR > Leave Requests and fill in the form.",
-      },
+    {
+      question: "How to submit a leave request?",
+      answer: (
+        <>
+          Navigate to{" "}
+          <a
+            href="https://adept-technologies.odoo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#004080", textDecoration: "underline" }}
+          >
+            Odoo
+          </a>{" "}
+          → Time Off → Select date and apply.
+        </>
+      ),
+    },
     ],
+    
     "Training & Resources": [
       {
         question: "How do I access training materials?",

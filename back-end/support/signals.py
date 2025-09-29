@@ -29,6 +29,6 @@ def send_ticket_notifications(sender, instance, created, **kwargs):
                     f"Our team will review it and get back to you shortly.\n\n"
                     f"Best regards,\nIT Support Team",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[instance.email],  # user’s email
+            recipient_list=[instance.email],  
             fail_silently=False,
         )
