@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import Login from "./components/Pages/login";
 import Dashboard from "./components/Pages/Dashboard";
 import Home from "./components/Pages/Home";
@@ -14,6 +15,20 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Calls from "./components/Pages/Calls";
 
 const App = () => {
+  useEffect(() => {
+    const handler = () => {
+      const audio = new Audio("/sounds/notify.mp3");
+      audio.play().catch(() => {});
+      window.removeEventListener("click", handler);
+    };
+
+    window.addEventListener("click", handler);
+
+    return () => {
+      window.removeEventListener("click", handler);
+    };
+  }, []);
+
   return (
     <Routes>
       {/* Public login route */}
