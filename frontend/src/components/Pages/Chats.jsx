@@ -409,7 +409,7 @@ const Chats = () => {
               </div>
             </div>
           </>
-        ) : <div className="no-chat-selected">Select a chat to start messaging</div>}
+        ) : <div className="no-chat-selected"></div>}
       </div>
     </div>
   );
