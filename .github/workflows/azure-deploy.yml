@@ -1,4 +1,4 @@
-name: Deploy to Azure
+name: Deploy to Azure App Service
 
 on:
   push:
@@ -7,74 +7,64 @@ on:
     branches: [ main ]
 
 env:
-  AZURE_WEBAPP_NAME: intranet-backend
+  AZURE_WEBAPP_NAME: adept-intranet
   PYTHON_VERSION: '3.11'
   NODE_VERSION: '18.x'
 
 jobs:
-  build-and-deploy-backend:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
+
+    - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install dependencies
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    # Build Frontend
+    - name: 'Build Frontend'
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+        
+    # Copy frontend build to backend static files
+    - name: 'Copy Frontend to Backend'
+      run: |
+        mkdir -p back-end/static
+        cp -r frontend/dist/* back-end/static/
+        
+    # Install backend dependencies
+    - name: 'Install Backend Dependencies'
       run: |
         cd back-end
         python -m pip install --upgrade pip
-        pip install -r requirements-azure.txt
-    
-    - name: Run tests
+        pip install -r requirements.txt
+        
+    # Collect static files
+    - name: 'Collect Static Files'
       run: |
         cd back-end
-        python manage.py test
-    
-    - name: Collect static files
+        python manage.py collectstatic --noinput --settings=backend.settings_azure
+        
+    # Create deployment package
+    - name: 'Create Deployment Package'
       run: |
         cd back-end
-        python manage.py collectstatic --noinput
-    
-    - name: Deploy to Azure Web App
+        zip -r ../deployment.zip . -x "venv/*" "__pycache__/*" "*.pyc" ".git/*"
+        
+    # Deploy to Azure Web App
+    - name: 'Deploy to Azure Web App'
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ./back-end
-
-  build-and-deploy-frontend:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-    
-    - name: Install dependencies
-      run: |
-        cd frontend
-        npm ci
-    
-    - name: Build application
-      run: |
-        cd frontend
-        npm run build
-    
-    - name: Deploy to Azure Static Web Apps
-      uses: Azure/static-web-apps-deploy@v1
-      with:
-        azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        action: "upload"
-        app_location: "frontend"
-        api_location: ""
-        output_location: "dist"
+        package: './deployment.zip'
