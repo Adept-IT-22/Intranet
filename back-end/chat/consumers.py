@@ -38,19 +38,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Save the message in DB
             await self.save_message(sender, receiver, message)
 
-            # Send to both sender and receiver groups
-            # The frontend will handle deduplication for the sender
+            # Send only to the receiver group (HTTP polling handles the rest)
             await self.channel_layer.group_send(
                 f'chat_{receiver}',
-                {
-                    'type': 'chat_message',
-                    'message': message,
-                    'sender': sender,
-                }
-            )
-            
-            await self.channel_layer.group_send(
-                f'chat_{sender}',
                 {
                     'type': 'chat_message',
                     'message': message,
@@ -90,5 +80,5 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return ChatMessage.objects.create(
             sender=sender,
             receiver=receiver,
-            message=message  # ✅ use correct field
+            message=message  
         )

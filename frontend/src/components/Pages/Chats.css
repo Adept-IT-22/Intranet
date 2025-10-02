@@ -433,3 +433,31 @@
       max-width: 400px;
     }
   }
+
+  .message-menu {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .message-menu.left {
+    left: -140%; /* pops to the left of the message bubble */
+  }
+  
+  .message-menu button {
+    background: none;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    text-align: left;
+  }
+  
+  .message-menu button:hover {
+    background-color: #eee;
+  }
+  
