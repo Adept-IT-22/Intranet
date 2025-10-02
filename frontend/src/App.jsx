@@ -3,6 +3,7 @@ import Login from "./components/Pages/login";
 import Dashboard from "./components/Pages/Dashboard";
 import Home from "./components/Pages/Home";
 import Chats from "./components/Pages/Chats";
+import SimpleChat from "./components/Pages/SimpleChat";
 import Documents from "./components/Pages/Documents";
 import EmployeeDirectory from "./components/Pages/EmployeeDirectory";
 import ITSupport from "./components/Pages/ITSupport";
@@ -23,7 +24,7 @@ const App = () => {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />}>
           <Route index element={<Home />} />
-          <Route path="chats" element={<Chats />} />
+          <Route path="chats" element={<SimpleChat />} />
           <Route path="documents" element={<Documents />} />
           <Route path="employee-directory" element={<EmployeeDirectory />} />
           <Route path="it-support" element={<ITSupport />} />

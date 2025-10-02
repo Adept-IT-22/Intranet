@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api/", // adjust if needed
+  baseURL: "http://localhost:8001/api/", // adjust if needed
 });
 
 // ✅ Always attach the token if available

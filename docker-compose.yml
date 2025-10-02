@@ -10,9 +10,9 @@ services:
       sh -c "
       pip install django-ngrok ngrok &&
       python manage.py migrate &&
-      python manage.py runserver 0.0.0.0:8000"
+      daphne -b 0.0.0.0 -p 8000 backend.asgi:application"
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DEBUG=True
       - DJANGO_SETTINGS_MODULE=backend.settings
@@ -29,7 +29,7 @@ services:
     dockerfile: Dockerfile
    container_name: intranet-frontend
    ports:
-    - "80:80"   
+    - "8080:80"   
    depends_on:
     - backend
 
@@ -45,15 +45,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
 
       
   redis:
     image: redis:7-alpine
     container_name: intranet-redis
-    ports:
-      - "6379:6379"   
+    # Expose only within the Docker network; no host port binding needed
 
 volumes:
   postgres_data:

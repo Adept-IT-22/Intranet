@@ -38,7 +38,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Save the message in DB
             await self.save_message(sender, receiver, message)
 
-            # Send to receiver group
+            # Send to both sender and receiver groups
+            # The frontend will handle deduplication for the sender
             await self.channel_layer.group_send(
                 f'chat_{receiver}',
                 {
@@ -47,8 +48,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'sender': sender,
                 }
             )
-
-            # Echo back to sender (so they see it immediately if needed)
+            
             await self.channel_layer.group_send(
                 f'chat_{sender}',
                 {

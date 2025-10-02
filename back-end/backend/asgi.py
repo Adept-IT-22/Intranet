@@ -12,12 +12,13 @@ django.setup()  # initialize Django
 # HTTP handling
 django_asgi_app = get_asgi_application()
 
-# Import routing AFTER Django setup
+# Import routing and middleware AFTER Django setup
 import chat.routing
+from chat.middleware import JWTAuthMiddleware
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
-    "websocket": AuthMiddlewareStack(
+    "websocket": JWTAuthMiddleware(
         URLRouter(
             chat.routing.websocket_urlpatterns
         )

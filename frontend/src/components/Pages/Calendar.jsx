@@ -6,7 +6,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 const localizer = momentLocalizer(moment);
 
 // ✅ Django API endpoint
-const API_URL = "http://127.0.0.1:8000/api/events/";
+const API_URL = "http://127.0.0.1:8001/api/events/";
 
 const MyCalendar = () => {
   const [date, setDate] = useState(new Date());

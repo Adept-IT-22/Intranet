@@ -20,6 +20,10 @@ CORS_ALLOWED_ORIGINS = [
     "https://*.ngrok-free.app",  
     "http://localhost:80",                   
     "http://127.0.0.1:80",                   
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 
@@ -27,6 +31,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.ngrok-free.app",   
     "http://localhost:80",
     "http://127.0.0.1:80",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -121,10 +129,7 @@ DATABASES = {
 # CHANNELS
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],  
-        },
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
 
