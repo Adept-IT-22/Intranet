@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Send, Phone, Video, MoreVertical, Search } from "lucide-react";
 import "./SimpleChat.css";
 
-const API_BASE = "http://localhost:8001/api/chat";
+const API_BASE = "http://192.168.1.154:8001/api/chat";
 
 const SimpleChat = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -51,7 +51,7 @@ const SimpleChat = () => {
     if (!token) return;
 
     // Get current user
-    fetch(`http://localhost:8001/api/auth/user/`, {
+    fetch(`http://192.168.1.154:8001/api/auth/user/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
