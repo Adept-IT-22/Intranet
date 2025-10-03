@@ -3,7 +3,7 @@ import { Plus, Send, Mic, Paperclip } from "lucide-react";
 import { toast } from "react-toastify";
 import "./Chats.css";
 
-const API_BASE = "http://127.0.0.1:8000/api/chat";
+const API_BASE = "http://192.168.1.154:8001/api/chat";
 
 const Chats = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -140,7 +140,7 @@ const Chats = () => {
 
     fetchChatHistory(selectedChat);
 
-    const wsUrl = `ws://127.0.0.1:8000/ws/chat/${selectedChat}/?token=${token}`;
+    const wsUrl = `ws://192.168.1.154:8001/ws/chat/${selectedChat}/?token=${token}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
