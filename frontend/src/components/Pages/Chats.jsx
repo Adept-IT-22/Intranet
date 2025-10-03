@@ -96,7 +96,7 @@ const Chats = () => {
   useEffect(() => {
     if (!token) return;
 
-    fetch(`${API_BASE.replace("/chat", "")}/auth/user/`, {
+    fetch(`http://192.168.1.154:8001/api/auth/user/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
