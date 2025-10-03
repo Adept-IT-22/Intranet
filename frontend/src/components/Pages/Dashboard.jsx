@@ -10,6 +10,7 @@ import {
   FaCalendarAlt,
   FaBook,
   FaLightbulb,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import logo from "../../assets/adeptlogo.png";
 import GreetingsBar from "./GreetingsBar";
@@ -27,6 +28,12 @@ export default function Dashboard() {
 
   const navigate = useNavigate();
   const location = useLocation(); // ✅ Check current route
+
+  // ✅ Logout function
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    navigate("/login");
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -114,6 +121,30 @@ export default function Dashboard() {
                   alt={user.username}
                   style={styles.avatar}
                 />
+                {/* ✅ Logout button */}
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    background: "#dc3545",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    fontSize: "0.9rem",
+                    fontWeight: "500",
+                    transition: "background-color 0.2s",
+                  }}
+                  onMouseOver={(e) => (e.target.style.backgroundColor = "#c82333")}
+                  onMouseOut={(e) => (e.target.style.backgroundColor = "#dc3545")}
+                  title="Logout"
+                >
+                  <FaSignOutAlt size={14} />
+                  Logout
+                </button>
               </>
             ) : (
               <span style={{ color: "#666" }}>Loading...</span>
