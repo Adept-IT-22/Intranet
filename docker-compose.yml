@@ -14,8 +14,8 @@ services:
     ports:
       - "8001:8000"
     environment:
-      - DEBUG=False
-      - DJANGO_SETTINGS_MODULE=backend.settings_production
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=backend.settings
       - DATABASE_URL=postgresql://intranetuser:intranetpass@db:5432/intranetdb
       - REDIS_URL=redis://redis:6379/0
       - POSTGRES_DB=intranetdb
