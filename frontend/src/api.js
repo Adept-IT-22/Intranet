@@ -2,7 +2,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://192.168.1.154:8001/api/", // Server backend API
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? "http://192.168.1.154:8001/api/" 
+    : "http://localhost:8001/api/", // Use container networking in production
 });
 
 // ✅ Always attach the token if available
