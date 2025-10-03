@@ -19,10 +19,23 @@ ALLOWED_HOSTS = [
 
 # Database configuration for production
 if 'DATABASE_URL' in os.environ:
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
-    }
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+        }
+    except ImportError:
+        # Fallback to manual configuration if dj_database_url is not available
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('POSTGRES_DB', 'intranetdb'),
+                'USER': os.environ.get('POSTGRES_USER', 'intranetuser'),
+                'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'intranetpass'),
+                'HOST': os.environ.get('POSTGRES_HOST', 'db'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
+        }
 else:
     # Use PostgreSQL for production
     DATABASES = {
