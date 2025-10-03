@@ -20,7 +20,7 @@ import {
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = "http://192.168.1.154:8001/api";
 
 const CorporateAnnouncements = () => {
   const [username, setUsername] = useState("");

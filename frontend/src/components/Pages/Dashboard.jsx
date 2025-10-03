@@ -37,7 +37,7 @@ export default function Dashboard() {
       return;
     }
 
-    fetch("http://127.0.0.1:8001/api/auth/user/", {
+    fetch("http://192.168.1.154:8001/api/auth/user/", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
