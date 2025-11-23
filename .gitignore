@@ -1,5 +1,6 @@
 # Azure Configuration (contains sensitive credentials)
 azure-config.txt
+deploy.ps1
 *.env
 .env.local
 
