@@ -14,7 +14,7 @@ param(
 # =========================
 $ACR_REGISTRY = "aptintra.azurecr.io"
 $ACR_USER = "aptintra"
-$ACR_PASS = "QXnHIFl2djNoRGgUTqqb0g1tgn/6WtYhB84f/+PD+6+ACRC/3UIF"  # ⚠️ Update this if changed
+$ACR_PASS = "YOUR_ACR_PASSWORD"  # ⚠️ Get from Azure Portal → ACR → Access keys
 $VM_USER = "azureuser"
 $VM_IP = "4.246.200.111"
 $ALLOWED_HOSTS = "4.246.200.111,localhost,127.0.0.1"
