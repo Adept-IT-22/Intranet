@@ -29,7 +29,7 @@ const ITSupport = () => {
         return;
       }
 
-      const res = await fetch("http://localhost:8000/api/support/tickets/", {
+      const res = await fetch("http://192.168.1.154:8001/api/support/tickets/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

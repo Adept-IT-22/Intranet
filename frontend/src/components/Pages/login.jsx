@@ -52,21 +52,21 @@ const LoginSignup = () => {
 
       if (res.ok) {
         if (isLogin) {
-          // ✅ Store JWT tokens correctly for Django SimpleJWT
+          // Store JWT tokens correctly for Django SimpleJWT
           localStorage.setItem("access_token", data.access);
           localStorage.setItem("refresh_token", data.refresh);
 
-          // ✅ Check if we have a redirect path saved
+          // Check if we have a redirect path saved
           const redirectTo =
             sessionStorage.getItem("redirect_after_login") || "/dashboard";
 
-          // ✅ Clear it so it doesn’t persist for next login
+          // Clear it so it doesn’t persist for next login
           sessionStorage.removeItem("redirect_after_login");
 
-          // ✅ Navigate to the intended page
+          // Navigate to the intended page
           navigate(redirectTo);
         } else {
-          // ✅ After signup, tell user to login
+          // After signup, tell user to login
           alert("✅ Account created successfully! Please log in.");
           setIsLogin(true);
         }

@@ -112,7 +112,7 @@ const Chats = () => {
   useEffect(() => {
     if (!token) return;
 
-    fetch(`${API_BASE.replace("/chat","")}/auth/user/`, {
+    fetch(`http://192.168.1.154:8001/api/auth/user/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
@@ -128,7 +128,6 @@ const Chats = () => {
 
   const fetchUsers = () => {
     if (!token) return;
-
     fetch(`${API_BASE}/users/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -332,6 +331,13 @@ const Chats = () => {
               ),
             };
         });
+
+        const shouldNotify = selectedChat !== data.sender || !windowFocused.current || document.hidden;
+        if (shouldNotify) {
+          setUnreadCounts(prev => ({ ...prev, [data.sender]: (prev[data.sender] || 0) + 1 }));
+          playNotificationSound();
+          showBrowserNotification(data.sender, data.message);
+        }
       }
 
       if (data.type === "typing") {
@@ -524,7 +530,6 @@ const Chats = () => {
     const tempId = generateUUID();
     const tempTimestamp = Date.now(); // Store timestamp for temp message
 
-    // Optimistic update
     setChatMessages(prev => ({
       ...prev,
       [selectedConversation.id]: [
@@ -722,12 +727,11 @@ const Chats = () => {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = e => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       const payload = {
         type: "typing",
@@ -1089,14 +1093,29 @@ const Chats = () => {
     conv.participants.some(p => p.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+
+  useEffect(() => {
+    const baseTitle = "Chat";
+    document.title = totalUnread > 0 ? `(${totalUnread}) ${baseTitle}` : baseTitle;
+  }, [totalUnread]);
+
   return (
     <div className="chat-container">
-      {/* Sidebar */}
+      {notificationPermission === "default" && (
+        <div
+          style={{ background: "#4CAF50", color: "white", padding: "10px", textAlign: "center", cursor: "pointer" }}
+          onClick={() => Notification.requestPermission().then(permission => setNotificationPermission(permission))}
+        >
+          🔔 Click here to enable desktop notifications
+        </div>
+      )}
+
       <div className="chat-sidebar">
         <div className="chat-header">
           <div className="chat-header-left">
             <div className="chat-logo"><span>✨</span></div>
-            <h1>Chat</h1>
+            <h1>Chat {totalUnread > 0 && `(${totalUnread})`}</h1>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button 
@@ -1179,7 +1198,7 @@ const Chats = () => {
         </div>
       </div>
 
-      {/* Chat Window */}
+      {/* Chat main */}
       <div className="chat-main">
         {selectedConversation ? (
           <>
@@ -1369,6 +1388,14 @@ const Chats = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* WhatsApp-style popover */}
+                  {menuState.visible && menuState.msgId === msg.id && (
+                    <div className="message-menu left" onClick={(e) => e.stopPropagation()}>
+                      {msg.isMe && <button onClick={() => deleteMessageForMe(msg.id)}>Delete for me</button>}
+                      <button onClick={() => deleteMessageForEveryone(msg.id)}>Delete for everyone</button>
+                    </div>
+                  )}
                 </div>
               ))}
               <div ref={messagesEndRef} />

@@ -33,7 +33,8 @@ def chat_history(request, username):
             "id": msg.id,
             "sender": msg.sender.username,
             "receiver": msg.receiver.username,
-            "content": msg.message,  # ✅ Use 'message' field from ChatMessage model
+            "content": msg.message,  # Frontend expects 'content'
+            "message": msg.message,  # Also include 'message' for compatibility
             "timestamp": msg.timestamp,
             "is_read": msg.is_read,
         }
@@ -81,6 +82,32 @@ def send_message(request, username):
         "timestamp": chat_message.timestamp,
         "is_read": chat_message.is_read,
     })
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def send_message_http(request, username):
+    """Send message via HTTP POST (more reliable than WebSocket)"""
+    other_user = get_object_or_404(User, username=username)
+    message_content = request.data.get("message")
+    
+    if not message_content:
+        return Response({"error": "Message content required"}, status=400)
+    
+    # Create message
+    chat_message = ChatMessage.objects.create(
+        sender=request.user,
+        receiver=other_user,
+        message=message_content
+    )
+    
+    return Response({
+        "id": chat_message.id,
+        "sender": chat_message.sender.username,
+        "receiver": chat_message.receiver.username,
+        "content": chat_message.message,
+        "timestamp": chat_message.timestamp,
+        "success": True
+    }, status=201)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

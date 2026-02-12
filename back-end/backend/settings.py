@@ -3,6 +3,10 @@ import os
 import dj_database_url
 from corsheaders.defaults import default_headers
 from decouple import config
+from corsheaders.defaults import default_headers
+
+
+# BASE SETTINGS
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,10 +23,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_HEADERS = list(default_headers) + [
-    'Authorization',
-    'Content-Type',
-]
+# INSTALLED APPS
 
 # ✅ CSRF (only needed if using session auth or cookies)
 _csrf_trusted_env = config("CSRF_TRUSTED_ORIGINS", default="")
@@ -30,18 +31,18 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted_env.split(",") if o.str
 
 # ✅ Installed apps
 INSTALLED_APPS = [
-    'daphne',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',  
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django_extensions',
-    'channels',
-    'backend',
-    'chat',
-    'documents',
+    "daphne",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django_extensions",
+    "channels",
+    "backend",
+    "chat",
+    "documents",
     "events",
     'support',
     'announcements',
@@ -49,17 +50,19 @@ INSTALLED_APPS = [
     
 
     # Third-party
-    'corsheaders',
-    'rest_framework',
+    "corsheaders",
+    "rest_framework",
 ]
 
-# ✅ JWT configuration
+
+# REST Framework JWT
+
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
     ),
 }
 
@@ -84,35 +87,37 @@ SIMPLE_JWT = {
 
 # ✅ Middleware
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'backend.urls'
+ROOT_URLCONF = "backend.urls"
+
+
+# TEMPLATES
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],  # Add paths to template dirs here if needed
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database configuration - Use PostgreSQL if DATABASE_URL is set (Render/Production), otherwise SQLite (local dev)
 DATABASE_URL = config('DATABASE_URL', default=None)
@@ -134,8 +139,8 @@ else:
         }
     }
 
-ASGI_APPLICATION = 'backend.asgi.application'
 
+# CHANNELS
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -149,32 +154,32 @@ CHANNEL_LAYERS = {
 }
 
 
-AUTH_USER_MODEL = 'backend.CustomUser'
+# AUTH
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = "backend.CustomUser"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-STATIC_URL = '/static/'
+# -------------------------
+# STATIC & MEDIA
+# -------------------------
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    BASE_DIR / "static",  
 ]
 
-# ✅ MEDIA for document uploads
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# ✅ STATIC
-STATIC_URL = "/static/"
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
+# EMAIL
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-# Admins who receive support tickets
-ADMIN_EMAILS = ["ann.ndiga@adept-techno.com"]
+ADMIN_EMAILS = ["it@adept-techno.com", "support@anqad.com"]

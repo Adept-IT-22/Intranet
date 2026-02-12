@@ -1,0 +1,98 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v16)'
+        required: true
+        default: 'v16'
+
+env:
+  ACR_REGISTRY: aptintra.azurecr.io
+  FRONTEND_IMAGE: aptintra.azurecr.io/intranet-frontend
+  BACKEND_IMAGE: aptintra.azurecr.io/intranet-backend
+  VM_USER: azureuser
+  VM_IP: 4.246.200.111
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set version
+        id: set_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=v$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      
+      - name: Build and push frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.nginx
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}:${{ steps.set_version.outputs.VERSION }}
+      
+      - name: Build and push backend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./Intranet/back-end
+          file: ./Intranet/back-end/Dockerfile
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}:${{ steps.set_version.outputs.VERSION }}
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Deploy to Azure VM
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ env.VM_USER }}@${{ env.VM_IP }} << EOF
+            # Stop and remove old containers
+            docker stop intranet-frontend intranet-backend 2>/dev/null || true
+            docker rm intranet-frontend intranet-backend 2>/dev/null || true
+            
+            # Pull new images
+            docker pull ${{ env.FRONTEND_IMAGE }}:${{ steps.set_version.outputs.VERSION }}
+            docker pull ${{ env.BACKEND_IMAGE }}:${{ steps.set_version.outputs.VERSION }}
+            
+            # Run frontend
+            docker run -d --name intranet-frontend -p 80:80 --restart always \
+              ${{ env.FRONTEND_IMAGE }}:${{ steps.set_version.outputs.VERSION }}
+            
+            # Run backend
+            docker run -d --name intranet-backend -p 8000:8000 \
+              -e ALLOWED_HOSTS='${{ env.VM_IP }},localhost,127.0.0.1' \
+              --restart always \
+              ${{ env.BACKEND_IMAGE }}:${{ steps.set_version.outputs.VERSION }}
+            
+            # Run migrations
+            sleep 5
+            docker exec intranet-backend python manage.py migrate --noinput || true
+          EOF
+      
+      - name: Deployment Summary
+        run: |
+          echo "✅ Deployment completed!"
+          echo "Version: ${{ steps.set_version.outputs.VERSION }}"
+          echo "Application: http://${{ env.VM_IP }}/Intranet/"
+

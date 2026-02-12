@@ -4,4 +4,5 @@ from .models import Ticket
 class TicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
-        fields = ['id', 'title', 'name', 'email', 'category', 'description', 'created_at']
+        fields = "__all__"
+        read_only_fields = ["created_by", "created_at", "status"]

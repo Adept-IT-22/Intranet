@@ -1,0 +1,37 @@
+services:
+  frontend:
+    image: adeptintranetacr.azurecr.io/intranet-frontend:v1
+    restart: always
+    ports:
+      - "80:80"   # public entrypoint required by Azure App Service
+    environment:
+      VITE_API_BASE_URL: "http://backend:8000"  # works inside the app service network
+    depends_on:
+      - backend
+
+  backend:
+    image: adeptintranetacr.azurecr.io/intranet-backend:v1
+    restart: always
+    command: >
+      sh -lc "python manage.py migrate &&
+              daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: intranet
+      DB_USER: intranet
+      DB_PASSWORD: intranetpass
+      ALLOWED_HOSTS: "adept-intranet.azurewebsites.net,localhost,127.0.0.1"
+      CSRF_TRUSTED_ORIGINS: "https://adept-intranet.azurewebsites.net"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_DB: intranet
+      POSTGRES_USER: intranet
+      POSTGRES_PASSWORD: intranetpass
+    volumes:
+      - /home/dbdata:/var/lib/postgresql/data
