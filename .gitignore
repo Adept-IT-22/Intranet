@@ -68,3 +68,6 @@ secrets/
 *.key
 *.crt
 
+# Intranet submodule (actual repository is inside)
+Intranet/
+
