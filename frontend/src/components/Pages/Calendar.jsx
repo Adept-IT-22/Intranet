@@ -6,7 +6,9 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 const localizer = momentLocalizer(moment);
 
 // ✅ Django API endpoint
-const API_URL = "http://192.168.1.154:8001/api/events/";
+const API_URL = "/api/events/";
+const ANNOUNCEMENTS_API = "/api/announcements/";
+const token = localStorage.getItem('access_token');
 
 const MyCalendar = () => {
   const [date, setDate] = useState(new Date());
@@ -16,17 +18,79 @@ const MyCalendar = () => {
   // ✅ Load events from Django backend
   const fetchEvents = async () => {
     try {
+      // Fetch calendar events
       const res = await fetch(API_URL);
-      const data = await res.json();
+      const calendarData = await res.json();
 
-      // Convert strings to Date objects
-      const formatted = data.map((evt) => ({
+      // Fetch announcements with event dates
+      const announcementsRes = await fetch(ANNOUNCEMENTS_API, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      let announcementsData = [];
+      if (announcementsRes.ok) {
+        announcementsData = await announcementsRes.json();
+      } else {
+        console.error("Failed to fetch announcements:", announcementsRes.status);
+      }
+
+      // Convert calendar events
+      const calendarEvents = calendarData.map((evt) => ({
         ...evt,
         start: new Date(evt.start),
         end: new Date(evt.end),
+        type: 'event',
       }));
 
-      setEvents(expandRecurringEvents(formatted));
+      // Convert announcements with event dates to calendar events
+      const announcementEvents = announcementsData
+        .filter(ann => {
+          // Filter for announcements with event dates that are active
+          const hasEventDate = ann.event_date && ann.event_date !== null && ann.event_date !== '';
+          const isActive = ann.is_active !== false; // Handle undefined as true
+          
+          if (hasEventDate && isActive) {
+            // Validate the date is parseable
+            const testDate = new Date(ann.event_date);
+            if (isNaN(testDate.getTime())) {
+              console.warn(`Invalid event_date for announcement ${ann.id}:`, ann.event_date);
+              return false;
+            }
+            return true;
+          }
+          return false;
+        })
+        .map((ann) => {
+          // Ensure we have valid dates
+          const startDate = new Date(ann.event_date);
+          // If no end date, default to 1 hour after start
+          let endDate;
+          if (ann.event_end_date && ann.event_end_date !== null && ann.event_end_date !== '') {
+            endDate = new Date(ann.event_end_date);
+            if (isNaN(endDate.getTime())) {
+              endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+            }
+          } else {
+            endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+          }
+          
+          return {
+            id: `announcement-${ann.id}`,
+            title: `📢 ${ann.title}`,
+            start: startDate,
+            end: endDate,
+            description: ann.content || ann.summary || '',
+            type: 'announcement',
+            priority: ann.priority || 'normal',
+          };
+        });
+
+      console.log("Calendar events:", calendarEvents.length);
+      console.log("Announcement events:", announcementEvents.length);
+      console.log("Announcements data:", announcementsData);
+
+      const allEvents = [...calendarEvents, ...announcementEvents];
+      setEvents(expandRecurringEvents(allEvents));
     } catch (err) {
       console.error("Failed to load events:", err);
     }
@@ -87,10 +151,10 @@ const MyCalendar = () => {
     }
   };
 
-  // ✅ Initial load
+  // ✅ Initial load and refresh on navigation
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [date, view]); // Refresh when date or view changes
 
   const handleNavigate = (newDate) => setDate(newDate);
   const handleViewChange = (newView) => setView(newView);
@@ -122,6 +186,22 @@ const MyCalendar = () => {
 
   return (
     <div className="h-screen p-4">
+      <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 style={{ margin: 0 }}>Calendar</h2>
+        <button 
+          onClick={fetchEvents}
+          style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#004aad', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer' 
+          }}
+        >
+          Refresh
+        </button>
+      </div>
       <Calendar
         localizer={localizer}
         selectable
@@ -134,7 +214,7 @@ const MyCalendar = () => {
         components={{
           toolbar: CustomToolbar,
         }}
-        style={{ height: "90vh" }}
+        style={{ height: "85vh" }}
       />
     </div>
   );

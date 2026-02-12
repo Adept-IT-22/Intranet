@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://192.168.1.154:8001/api";
+// Use env override, otherwise call same-host backend via Nginx proxy
+const API_URL = import.meta.env.VITE_API_BASE || "/api";
 
 const LoginSignup = () => {
   const navigate = useNavigate();
@@ -12,6 +13,14 @@ const LoginSignup = () => {
   });
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

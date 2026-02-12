@@ -1,34 +1,42 @@
-# Use Python 3.11 slim image
 FROM python:3.11-slim
 
-# Set working directory
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set work directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
-
 # Install Python dependencies
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the project
-COPY . .
+# Copy project
+COPY . /app/
 
-# Create static files directory
-RUN mkdir -p static
+# Create media directory
+RUN mkdir -p /app/media
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --settings=backend.settings_azure
-
-# Expose port 8000
+# Expose port
 EXPOSE 8000
 
-# Use gunicorn for production
-RUN pip install gunicorn
+# Create startup script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Running migrations..."\n\
+python manage.py migrate --noinput || true\n\
+echo "Starting server..."\n\
+# Use PORT environment variable (Render) or default to 8000\n\
+PORT=${PORT:-8000}\n\
+exec gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT --workers 2\n\
+' > /app/start.sh && chmod +x /app/start.sh
 
-# Default command: run migrations then start server with gunicorn
-CMD ["sh", "-c", "python manage.py migrate --settings=backend.settings_azure && gunicorn --bind 0.0.0.0:8000 backend.wsgi:application"]
+# Run the application
+CMD ["/app/start.sh"]
+
