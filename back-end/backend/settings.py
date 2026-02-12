@@ -1,21 +1,21 @@
 from pathlib import Path
 import os
+import dj_database_url
 from corsheaders.defaults import default_headers
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'your-secret-key'  # NEVER share this publicly on GitHub
-DEBUG = True  # Set to False on production
+# Read DEBUG from env; default True for dev, set to False in production
+DEBUG = config("DEBUG", default=True, cast=bool)
 
-# ✅ Step 1: Add your deployed frontend domain here
-ALLOWED_HOSTS = []
+# ✅ Step 1: ALLOWED_HOSTS from env, e.g. "4.246.200.111,localhost,127.0.0.1"
+_allowed_hosts_env = config("ALLOWED_HOSTS", default="")
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(",") if h.strip()]
 
-# ✅ Step 2: CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",                      # for local dev
-    "https://adept-it-22.github.io",              # ✅ no trailing slash
-]
+# ✅ Step 2: CORS - Allow all origins
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -25,9 +25,8 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 ]
 
 # ✅ CSRF (only needed if using session auth or cookies)
-CSRF_TRUSTED_ORIGINS = [
-    "https://your-frontend-domain.com",
-]
+_csrf_trusted_env = config("CSRF_TRUSTED_ORIGINS", default="")
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted_env.split(",") if o.strip()]
 
 # ✅ Installed apps
 INSTALLED_APPS = [
@@ -45,6 +44,8 @@ INSTALLED_APPS = [
     'documents',
     "events",
     'support',
+    'announcements',
+    'innovations',
     
 
     # Third-party
@@ -60,6 +61,25 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+}
+
+# ✅ JWT Token Settings - Very long expiration (1 year) so users stay logged in
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=365),  # 1 year - users stay logged in
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=365),  # 1 year
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
 # ✅ Middleware
@@ -94,13 +114,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# SQLite DB (or update for PostgreSQL in production)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
+# Database configuration - Use PostgreSQL if DATABASE_URL is set (Render/Production), otherwise SQLite (local dev)
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    # Production: Use PostgreSQL from DATABASE_URL (Render, Heroku, etc.)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    # Development: Use SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / "db.sqlite3",
+        }
+    }
 
 ASGI_APPLICATION = 'backend.asgi.application'
 
@@ -108,7 +140,10 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [(
+                config("REDIS_HOST", default="127.0.0.1"),
+                config("REDIS_PORT", default=6379, cast=int),
+            )],
         },
     },
 }

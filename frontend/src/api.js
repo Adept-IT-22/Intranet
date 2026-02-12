@@ -1,8 +1,16 @@
 // src/api.js
 import axios from "axios";
 
+// Use environment variable or default based on environment
+// For Render: Set VITE_API_BASE=https://adept-intranet-backend.onrender.com/api/
+// For local dev: Uses /api/ (proxied by Vite)
+const baseURL = import.meta.env.VITE_API_BASE || 
+  (import.meta.env.PROD 
+    ? 'https://adept-intranet-backend.onrender.com/api/' 
+    : '/api/');
+
 const api = axios.create({
-  baseURL: "http://localhost:8000/api/", // adjust if needed
+  baseURL,
 });
 
 // ✅ Always attach the token if available

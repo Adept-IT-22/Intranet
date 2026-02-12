@@ -1,4 +1,4 @@
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from icalendar import Calendar, Event
 from datetime import datetime
 import pytz
