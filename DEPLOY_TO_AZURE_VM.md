@@ -24,7 +24,7 @@ $ACR_PASS = "YOUR_ACR_PASSWORD"  # Paste the password from Step 1
 .\deploy.ps1 -Both -Version v17
 ```
 
-**That's it!** Your app will be deployed to: **http://4.246.200.111/Intranet/**
+**That's it!** Your app will be deployed to: **http://192.168.1.154:8080/Intranet/**
 
 ## 📝 What the Script Does
 
@@ -49,10 +49,10 @@ Just increment the version and deploy:
 
 ```powershell
 # Check containers are running
-ssh azureuser@4.246.200.111 "docker ps"
+ssh azureuser@192.168.1.154 "docker ps"
 
 # View logs
-ssh azureuser@4.246.200.111 "docker logs intranet-backend --tail 20"
+ssh azureuser@192.168.1.154 "docker logs intranet-backend --tail 20"
 ```
 
 ## 🆘 Troubleshooting
@@ -71,9 +71,10 @@ ssh azureuser@4.246.200.111 "docker logs intranet-backend --tail 20"
 
 ## 📞 Your Server Info
 
-- **VM IP**: `4.246.200.111`
+- **VM IP**: `192.168.1.154`
+- **Port**: `8080`
 - **ACR**: `aptintra.azurecr.io`
-- **App URL**: `http://4.246.200.111/Intranet/`
+- **App URL**: `http://192.168.1.154:8080/Intranet/`
 
 ---
 
