@@ -98,8 +98,8 @@ const ITSupport = () => {
           </p>
           <p>
             <strong>Email:</strong>{" "}
-            <a href="mailto:support@anqad.com" style={{ color: "#004080" }}>
-              support@anqad.com
+            <a href="mailto:ithlpdsk@adept-techno.com" style={{ color: "#004080" }}>
+              ithlpdsk@adept-techno.com
             </a>
           </p>
           <p>Mon–Fri: 8 AM – 6 PM | Emergencies 24/7</p>
@@ -233,8 +233,8 @@ const ITSupport = () => {
           </p>
           <p>
             <strong>Suspicious email?</strong> Report to{" "}
-            <a href="mailto:support@anqad.com" style={{ color: "#004080" }}>
-              support@anqad.com
+            <a href="mailto:ithlpdsk@adept-techno.com" style={{ color: "#004080" }}>
+              ithlpdsk@adept-techno.com
             </a>
             .
           </p>

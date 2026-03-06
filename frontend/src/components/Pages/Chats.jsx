@@ -55,6 +55,7 @@ const Chats = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [editingGroupName, setEditingGroupName] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
   const fileInputRef = useRef(null);
 
   const socketRef = useRef(null);
@@ -493,6 +494,66 @@ const Chats = () => {
     if (response.ok) fetchConversationMessages(selectedConversation.id, true);
   };
 
+  const handleUpdateGroupName = async () => {
+    if (!newGroupName.trim() || !selectedConversation) return;
+    try {
+      const response = await fetch(`${API_BASE}/conversations/${selectedConversation.id}/update-name/`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: newGroupName.trim() }),
+      });
+      if (response.ok) {
+        setEditingGroupName(false);
+        fetchConversations();
+        setSelectedConversation(prev => ({ ...prev, name: newGroupName.trim() }));
+      }
+    } catch (err) {
+      console.error("Error updating group name:", err);
+    }
+  };
+
+  const handleAddParticipant = async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE}/conversations/${selectedConversation.id}/manage-participants/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "add", user_id: userId }),
+      });
+      if (response.ok) {
+        setShowAddParticipantModal(false);
+        // Refresh details
+        fetch(`${API_BASE}/conversations/${selectedConversation.id}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then(res => res.json())
+          .then(data => setConversationDetails(data));
+      }
+    } catch (err) {
+      console.error("Error adding participant:", err);
+    }
+  };
+
+  const handleRemoveParticipant = async (userId) => {
+    if (!confirm("Are you sure you want to remove this person?")) return;
+    try {
+      const response = await fetch(`${API_BASE}/conversations/${selectedConversation.id}/manage-participants/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "remove", user_id: userId }),
+      });
+      if (response.ok) {
+        // Refresh details
+        fetch(`${API_BASE}/conversations/${selectedConversation.id}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then(res => res.json())
+          .then(data => setConversationDetails(data));
+      }
+    } catch (err) {
+      console.error("Error removing participant:", err);
+    }
+  };
+
   const filteredConversations = conversations.filter(conv =>
     conv.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -535,11 +596,47 @@ const Chats = () => {
           <>
             <div className="chat-main-header">
               <div className="chat-main-header-content">
-                <div className="current-chat-avatar">{selectedConversation.is_group ? <Users size={24} /> : <span>{selectedConversation.name ? selectedConversation.name[0] : "?"}</span>}</div>
-                <div className="current-chat-info">
-                  <h2>{selectedConversation.name}</h2>
-                  <p>{selectedConversation.is_group ? "Group chat" : "Private conversation"}</p>
+                <div className="current-chat-avatar" onClick={() => selectedConversation.is_group && setShowManageParticipantsModal(true)} style={{ cursor: selectedConversation.is_group ? 'pointer' : 'default' }}>
+                  {selectedConversation.is_group ? <Users size={24} /> : <span>{selectedConversation.name ? selectedConversation.name[0] : "?"}</span>}
                 </div>
+                <div className="current-chat-info">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {editingGroupName ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                          type="text"
+                          value={newGroupName}
+                          onChange={(e) => setNewGroupName(e.target.value)}
+                          className="edit-name-input"
+                          autoFocus
+                        />
+                        <button className="icon-btn-small" onClick={handleUpdateGroupName}><Check size={16} /></button>
+                        <button className="icon-btn-small" onClick={() => setEditingGroupName(false)}><XIcon size={16} /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <h2 onClick={() => {
+                          if (selectedConversation.is_group && isAdmin) {
+                            setEditingGroupName(true);
+                            setNewGroupName(selectedConversation.name);
+                          }
+                        }} style={{ cursor: (selectedConversation.is_group && isAdmin) ? 'pointer' : 'default' }}>
+                          {selectedConversation.name}
+                        </h2>
+                        {selectedConversation.is_group && isAdmin && <Pencil size={14} className="edit-icon" onClick={() => { setEditingGroupName(true); setNewGroupName(selectedConversation.name); }} />}
+                      </>
+                    )}
+                  </div>
+                  <p onClick={() => selectedConversation.is_group && setShowManageParticipantsModal(true)} style={{ cursor: selectedConversation.is_group ? 'pointer' : 'default' }}>
+                    {selectedConversation.is_group ? `${conversationDetails?.participants?.length || 0} participants` : "Private conversation"}
+                  </p>
+                </div>
+
+                {selectedConversation.is_group && (
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                    <button className="icon-btn" onClick={() => setShowManageParticipantsModal(true)} title="Manage Group"><Users size={20} /></button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="messages-container">
@@ -549,7 +646,7 @@ const Chats = () => {
                     <div className="message-avatar">{msg.avatar}</div>
                     <div className="message-bubble-wrapper">
                       <div className={`message-bubble ${msg.isMe ? "my-bubble" : "other-bubble"}`}>
-                        {msg.attachment && <div className="message-attachment"><File size={16} /><div className="attachment-info"><a href={msg.attachment.url} target="_blank" rel="noreferrer" className="attachment-link">{msg.attachment.name}</a><span className="attachment-size">{formatFileSize(msg.attachment.size)}</span></div><a href={msg.attachment.url} download className="attachment-download"><Download size={14} /></a></div>}
+                        {msg.attachment && <div className="message-attachment"><File size={16} /><div className="attachment-info"><a href={msg.attachment.url} target="_blank" rel="noreferrer" className="attachment-link">{msg.attachment.name}</a><span className="attachment-size">{formatFileSize(msg.attachment.size)}</span></div><a href={msg.attachment.url} download={msg.attachment.name} className="attachment-download"><Download size={14} /></a></div>}
                         <p>{msg.content}</p>
                       </div>
                       <div className="message-info-row">
@@ -605,15 +702,54 @@ const Chats = () => {
         </div>
       )}
 
-      {showCreateDirectModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateDirectModal(false)}>
+      {showManageParticipantsModal && (
+        <div className="modal-overlay" onClick={() => setShowManageParticipantsModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h2>Start Private Chat</h2><button onClick={() => setShowCreateDirectModal(false)}><X size={20} /></button></div>
+            <div className="modal-header">
+              <h2>Group Participants</h2>
+              <button onClick={() => setShowManageParticipantsModal(false)}><X size={20} /></button>
+            </div>
             <div className="modal-body">
               <div className="participants-list">
-                {users.filter(u => u.id !== currentUserId).map(user => (
-                  <div key={user.id} className="participant-item" onClick={() => createDirectChat(user.id)}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{user.username[0].toUpperCase()}</div>
+                {conversationDetails?.participants?.map(p => (
+                  <div key={p.id} className="participant-item-static">
+                    <div className="participant-info">
+                      <div className="participant-avatar-small">{p.username[0].toUpperCase()}</div>
+                      <div className="participant-name-wrapper">
+                        <span className="participant-username">{p.username}</span>
+                        <span className="participant-role">{p.role === 'admin' ? 'Admin' : 'Member'}</span>
+                      </div>
+                    </div>
+                    {isAdmin && p.username !== currentUser && (
+                      <button className="remove-btn" onClick={() => handleRemoveParticipant(p.id)}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {isAdmin && (
+                <button className="add-participant-btn-long" onClick={() => setShowAddParticipantModal(true)}>
+                  <Plus size={16} /> Add Participant
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddParticipantModal && (
+        <div className="modal-overlay" onClick={() => setShowAddParticipantModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Add to Group</h2>
+              <button onClick={() => setShowAddParticipantModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="participants-list">
+                {users.filter(u => u.id !== currentUserId && !conversationDetails?.participants?.some(p => p.id === u.id)).map(user => (
+                  <div key={user.id} className="participant-item" onClick={() => handleAddParticipant(user.id)}>
+                    <div className="participant-avatar">{user.username[0].toUpperCase()}</div>
                     <span>{user.username}</span>
                   </div>
                 ))}

@@ -167,4 +167,4 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-ADMIN_EMAILS = ["it@adept-techno.com", "support@anqad.com"]
+ADMIN_EMAILS = ["it@adept-techno.com", "ithlpdsk@adept-techno.com"]

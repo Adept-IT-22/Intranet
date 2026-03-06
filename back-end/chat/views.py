@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view, permission_classes, parser_classes
+﻿from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -29,11 +29,19 @@ def list_conversations(request):
         if not conv.is_group:
             other_user = conv.participants.exclude(id=request.user.id).first()
         
+        # Helper to decide what show in the sidebar preview
+        last_message_preview = "No messages yet"
+        if last_msg:
+            if last_msg.content:
+                last_message_preview = last_msg.content
+            elif last_msg.attachment:
+                last_message_preview = f"📎 Sent an attachment"
+
         data.append({
             "id": str(conv.id),
             "name": conv.name or (other_user.username if other_user else "Unknown"),
             "is_group": conv.is_group,
-            "last_message": last_msg.content if last_msg else "No messages yet",
+            "last_message": last_message_preview,
             "timestamp": last_msg.timestamp if last_msg else conv.updated_at,
             "unread_count": conv.messages.filter(is_read=False).exclude(sender=request.user).count()
         })
@@ -82,9 +90,9 @@ def get_conversation_history(request, conversation_id):
             "is_read": msg.is_read,
             "is_me": msg.sender == request.user,
             "attachment": {
-                "name": msg.attachment.name,
-                "url": msg.attachment.url,
-                "size": msg.attachment.size
+                "name": msg.attachment.name.split("/")[-1] if msg.attachment else None,
+                "url": msg.attachment.url if msg.attachment else None,
+                "size": msg.attachment.size if msg.attachment else 0
             } if msg.attachment else None
         }
         for msg in messages
@@ -147,9 +155,9 @@ def send_message_to_conversation(request, conversation_id):
         "content": msg.content,
         "timestamp": msg.timestamp,
         "attachment": {
-            "name": msg.attachment.name,
-            "url": msg.attachment.url,
-            "size": msg.attachment.size
+            "name": msg.attachment.name.split("/")[-1] if msg.attachment else None,
+            "url": msg.attachment.url if msg.attachment else None,
+            "size": msg.attachment.size if msg.attachment else 0
         } if msg.attachment else None
     })
 
@@ -162,3 +170,39 @@ def mark_conversation_as_read(request, conversation_id):
     
     conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
     return Response({"message": "Conversation marked as read"})
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def update_group_name(request, conversation_id):
+    conv = get_object_or_404(Conversation, id=conversation_id, is_group=True)
+    if request.user not in conv.participants.all():
+        return Response({"error": "Unauthorized"}, status=403)
+    
+    name = request.data.get("name")
+    if name:
+        conv.name = name
+        conv.save()
+        return Response({"id": str(conv.id), "name": conv.name})
+    return Response({"error": "Name is required"}, status=400)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def manage_group_participants(request, conversation_id):
+    conv = get_object_or_404(Conversation, id=conversation_id, is_group=True)
+    if request.user not in conv.participants.all():
+        return Response({"error": "Unauthorized"}, status=403)
+    
+    action = request.data.get("action") # "add" or "remove"
+    user_id = request.data.get("user_id")
+    target_user = get_object_or_404(User, id=user_id)
+    
+    if action == "add":
+        conv.participants.add(target_user)
+    elif action == "remove":
+        if conv.participants.count() <= 1:
+            return Response({"error": "Cannot remove the last participant"}, status=400)
+        conv.participants.remove(target_user)
+    else:
+        return Response({"error": "Invalid action"}, status=400)
+        
+    return Response({"message": f"User {action}ed successfully"})
