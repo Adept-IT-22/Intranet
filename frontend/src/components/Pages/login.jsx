@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://192.168.1.154:8001/api";
+import api from "../../api";
 
 const LoginSignup = () => {
   const navigate = useNavigate();
@@ -22,26 +21,22 @@ const LoginSignup = () => {
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/token/" : "/signup/";
+      const endpoint = isLogin ? "token/" : "signup/";
       const payload = isLogin
         ? {
-            username: formData.username,
-            password: formData.password,
-          }
+          username: formData.username,
+          password: formData.password,
+        }
         : formData;
 
-      const res = await fetch(`${API_URL}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
+      console.log("🚀 Sending payload to", `/api/${endpoint}`, payload);
 
-      const data = await res.json();
+      const res = await api.post(`/${endpoint}`, payload);
 
-      if (res.ok) {
+      const data = res.data;
+      console.log("📩 Received response:", res.status, data);
+
+      if (res.status === 200 || res.status === 201) {
         if (isLogin) {
           // Store JWT tokens correctly for Django SimpleJWT
           localStorage.setItem("access_token", data.access);

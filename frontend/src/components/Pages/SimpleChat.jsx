@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, Phone, Video, MoreVertical, Search } from "lucide-react";
+import api from "../../api";
 import "./SimpleChat.css";
-
-const API_BASE = "http://192.168.1.154:8001/api/chat";
 
 const SimpleChat = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -51,20 +50,14 @@ const SimpleChat = () => {
     if (!token) return;
 
     // Get current user
-    fetch(`http://192.168.1.154:8001/api/auth/user/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => res.json())
-      .then(data => setCurrentUser(data.username))
+    api.get("/auth/user/")
+      .then(res => setCurrentUser(res.data.username))
       .catch(err => console.error("Error fetching user:", err));
 
     // Get users list
-    fetch(`${API_BASE}/users/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => res.json())
-      .then(data => {
-        setUsers(Array.isArray(data) ? data : []);
+    api.get("/chat/users/")
+      .then(res => {
+        setUsers(Array.isArray(res.data) ? res.data : []);
       })
       .catch(err => console.error("Error fetching users:", err));
   }, [token]);
@@ -74,11 +67,9 @@ const SimpleChat = () => {
     if (!selectedChat || !token) return;
 
     const pollMessages = () => {
-      fetch(`${API_BASE}/history/${selectedChat}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(res => res.json())
-        .then(data => {
+      api.get(`/chat/history/${selectedChat}/`)
+        .then(res => {
+          const data = res.data;
           const formattedMessages = Array.isArray(data) ? data.map(msg => ({
             id: msg.id,
             sender: msg.sender,
@@ -90,7 +81,7 @@ const SimpleChat = () => {
           // Check for new messages and show notifications
           const previousMessages = messages[selectedChat] || [];
           const previousCount = previousMessageCounts[selectedChat] || 0;
-          
+
           if (formattedMessages.length > previousCount && previousCount > 0) {
             // New message detected
             const newMessages = formattedMessages.slice(previousCount);
@@ -136,18 +127,16 @@ const SimpleChat = () => {
     const pollAllUsers = () => {
       users.forEach(user => {
         if (user.username !== currentUser) {
-          fetch(`${API_BASE}/history/${user.username}/`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-            .then(res => res.json())
-            .then(data => {
+          api.get(`/chat/history/${user.username}/`)
+            .then(res => {
+              const data = res.data;
               const messageList = Array.isArray(data) ? data : [];
-              
+
               // Update last message time for sorting
               if (messageList.length > 0) {
                 const lastMsg = messageList[messageList.length - 1];
                 const lastMsgTime = new Date(lastMsg.timestamp).getTime();
-                
+
                 setLastMessageTime(prev => {
                   const currentTime = prev[user.username] || 0;
                   if (lastMsgTime > currentTime) {
@@ -204,16 +193,11 @@ const SimpleChat = () => {
     if (!message.trim() || !selectedChat || !token) return;
 
     try {
-      const response = await fetch(`${API_BASE}/send/${selectedChat}/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: message.trim() }),
+      const response = await api.post(`/chat/send/${selectedChat}/`, {
+        message: message.trim()
       });
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 201) {
         setMessage("");
         // Message will appear via polling
       } else {
@@ -289,14 +273,14 @@ const SimpleChat = () => {
                     )}
                   </div>
                   <div className="teams-contact-status">
-                    {lastMessageTime[user.username] 
+                    {lastMessageTime[user.username]
                       ? `Last active ${formatTime(lastMessageTime[user.username])}`
                       : "Available"
                     }
                   </div>
                 </div>
                 <div className="teams-contact-time">
-                  {lastMessageTime[user.username] && 
+                  {lastMessageTime[user.username] &&
                     formatTime(lastMessageTime[user.username])
                   }
                 </div>

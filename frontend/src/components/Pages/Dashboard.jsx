@@ -10,7 +10,7 @@ import {
   FaCalendarAlt,
   FaBook,
   FaLightbulb,
-  FaSignOutAlt,
+  FaBell,
 } from "react-icons/fa";
 import logo from "../../assets/adeptlogo.png";
 import GreetingsBar from "./GreetingsBar";
@@ -25,9 +25,18 @@ document.head.appendChild(openSansLink);
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1000);
 
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ Check current route
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1000);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // ✅ Logout function
   const handleLogout = () => {
@@ -44,7 +53,7 @@ export default function Dashboard() {
       return;
     }
 
-    fetch("http://192.168.1.154:8001/api/auth/user/", {
+    fetch("/api/auth/user/", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -59,9 +68,32 @@ export default function Dashboard() {
       });
   }, [navigate]);
 
+  const getAvatarDisplay = () => {
+    if (user?.avatar) {
+      return <img src={user.avatar} alt={user.username} style={styles.avatar} />;
+    }
+    const initials = user?.username?.substring(0, 2).toUpperCase() || "U";
+    return (
+      <div
+        style={{
+          ...styles.avatar,
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          fontWeight: "600",
+          fontSize: "14px",
+        }}
+      >
+        {initials}
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: "flex", height: "100vh", fontFamily: "'Open Sans', sans-serif" }}>
-      {/* ✅ Sidebar with all menu links */}
+      {/* Sidebar */}
       <aside style={styles.sidebar}>
         <nav style={styles.nav}>
           {sidebarLinks.map((item) => (
@@ -82,21 +114,23 @@ export default function Dashboard() {
         </nav>
       </aside>
 
-      {/* ✅ Main content wrapper */}
+      {/* Main content wrapper */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f7f9fc" }}>
-        {/* ✅ Header */}
+        {/* Header */}
         <header style={styles.header}>
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <img
-              src={logo}
-              alt="Adept Technologies Logo"
-              style={{ height: "180px", objectFit: "contain" }}
-            />
-          </div>
+          {/* Logo (hidden on mobile/narrow screens) */}
+          {!isMobile && (
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <img
+                src={logo}
+                alt="Adept Technologies Logo"
+                style={{ height: "180px", objectFit: "contain", marginRight: "20px" }}
+              />
+            </div>
+          )}
 
           {/* Search bar */}
-          <div style={{ flex: 1, textAlign: "center" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
             <input
               type="text"
               placeholder="Search..."
@@ -106,22 +140,46 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* ✅ User info */}
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          {/* User info on the right */}
+          <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
             {user ? (
               <>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: "600", color: "#333" }}>{user.username}</div>
-                  <div style={{ fontSize: "0.9rem", color: "#666" }}>
+                  <div style={{ fontWeight: "600", color: "#333", fontSize: "14px" }}>{user.username}</div>
+                  <div style={{ fontSize: "0.85rem", color: "#666" }}>
                     {user.role || "Member"}
                   </div>
                 </div>
-                <img
-                  src={user.avatar || "https://i.pravatar.cc/100"}
-                  alt={user.username}
-                  style={styles.avatar}
-                />
-                {/* ✅ Logout button */}
+
+                {/* Notification Bell */}
+                <div style={{ position: "relative" }}>
+                  <button
+                    style={{
+                      position: "relative",
+                      padding: "8px",
+                      backgroundColor: "transparent",
+                      border: "none",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#333",
+                    }}
+                    title="Notifications"
+                  >
+                    <FaBell size={20} />
+                  </button>
+                </div>
+
+                <div
+                  onClick={() => setShowProfileModal(true)}
+                  style={{ cursor: "pointer", position: "relative" }}
+                >
+                  {getAvatarDisplay()}
+                </div>
+
+                {/* Logout button */}
                 <button
                   onClick={handleLogout}
                   style={{
@@ -129,20 +187,15 @@ export default function Dashboard() {
                     color: "white",
                     border: "none",
                     borderRadius: "8px",
-                    padding: "8px 12px",
+                    padding: "10px 20px",
                     cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    fontSize: "0.9rem",
-                    fontWeight: "500",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
                     transition: "background-color 0.2s",
                   }}
                   onMouseOver={(e) => (e.target.style.backgroundColor = "#c82333")}
                   onMouseOut={(e) => (e.target.style.backgroundColor = "#dc3545")}
-                  title="Logout"
                 >
-                  <FaSignOutAlt size={14} />
                   Logout
                 </button>
               </>
@@ -152,16 +205,13 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* ✅ Main Page Content */}
+        {/* Main Content */}
         <main style={styles.main}>
-          {/* ✅ Show Greetings ONLY on the dashboard home */}
           {location.pathname === "/dashboard" && (
             <div style={styles.greetingsCard}>
               <GreetingsBar username={user?.username} />
             </div>
           )}
-
-          {/* ✅ Outlet renders subpages */}
           <Outlet />
         </main>
       </div>
@@ -169,7 +219,6 @@ export default function Dashboard() {
   );
 }
 
-/* ✅ Sidebar links (Innovations included) */
 const sidebarLinks = [
   { to: "/dashboard", label: "Dashboard Home", icon: <FaTh size={28} /> },
   { to: "/dashboard/employee-directory", label: "Employee Directory", icon: <FaUsers size={28} /> },
@@ -179,10 +228,9 @@ const sidebarLinks = [
   { to: "/dashboard/it-support", label: "IT Support", icon: <FaLaptop size={28} /> },
   { to: "/dashboard/calendar", label: "Calendar", icon: <FaCalendarAlt size={28} /> },
   { to: "/dashboard/lms", label: "LMS", icon: <FaBook size={28} /> },
-  { to: "/dashboard/innovations", label: "Innovations", icon: <FaLightbulb size={28} /> }, // ✅ Still here
+  { to: "/dashboard/innovations", label: "Innovations", icon: <FaLightbulb size={28} /> },
 ];
 
-/* ✅ Styles */
 const styles = {
   sidebar: {
     width: "90px",
@@ -192,13 +240,13 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    height: "100vh", // ✅ Full height so the blue reaches the bottom
+    height: "100vh",
   },
   nav: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "20px", // ✅ Reduced from 28px → 20px so all icons fit
+    gap: "20px",
     flexGrow: 1,
   },
   link: {
@@ -211,15 +259,17 @@ const styles = {
     borderBottom: "1px solid #ddd",
     display: "flex",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: "0 20px",
-    background: "linear-gradient(to right, #ffffff, #f4f6f9)",
+    background: "#ffffff",
     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   },
   search: {
-    width: "300px",
-    padding: "8px 12px",
+    maxWidth: "400px",
+    width: "100%",
+    padding: "8px 16px",
     borderRadius: "20px",
-    border: "1px solid #ccc",
+    border: "1px solid #e1e4e8",
     background: "#f1f3f6",
     fontSize: "0.95rem",
     color: "#333",
@@ -230,6 +280,7 @@ const styles = {
     borderRadius: "50%",
     objectFit: "cover",
     boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+    border: "2px solid #fff",
   },
   main: {
     flex: 1,

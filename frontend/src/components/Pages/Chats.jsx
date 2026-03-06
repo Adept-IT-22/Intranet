@@ -1,113 +1,137 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, Send, Mic, Paperclip } from "lucide-react";
-import { toast } from "react-toastify";
+import { Plus, Send, Mic, Paperclip, X, Users, Edit2, Trash2, Check, X as XIcon, File, Download, Pencil } from "lucide-react";
 import "./Chats.css";
 
-const API_BASE = "http://192.168.1.154:8001/api/chat";
+const API_BASE = "/api/chat";
+
+// UUID generator that works in all browsers
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for browsers that don't support crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+// Helper to get backend base URL (for WebSocket and attachment URLs)
+const getBackendBaseUrl = () => {
+  // Use current host for WebSocket and images
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+
+  // If we're on localhost:5173 (Vite), point to 8001
+  if (window.location.port === '5173' || window.location.port === '3000') {
+    return `${protocol}://${hostname}:8001`;
+  }
+
+  // In production, assume same host/port or proxy handled it
+  return `${protocol}://${hostname}${window.location.port ? `:${window.location.port}` : ""}`;
+};
 
 const Chats = () => {
   const [currentUser, setCurrentUser] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [users, setUsers] = useState([]);
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
   const [message, setMessage] = useState("");
   const [chatMessages, setChatMessages] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [typingUsers, setTypingUsers] = useState([]);
-  const [unreadCounts, setUnreadCounts] = useState({});
-  const [notificationPermission, setNotificationPermission] = useState("default");
-
-  // WhatsApp-style popover menu state
-  const [menuState, setMenuState] = useState({ visible: false, msgId: null });
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [showCreateDirectModal, setShowCreateDirectModal] = useState(false);
+  const [showManageParticipantsModal, setShowManageParticipantsModal] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [conversationDetails, setConversationDetails] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editMessageContent, setEditMessageContent] = useState("");
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [editingGroupName, setEditingGroupName] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const fileInputRef = useRef(null);
 
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const windowFocused = useRef(true);
-
-  // 🔊 Notification sound
-  const audioContextRef = useRef(null);
-  const audioBufferRef = useRef(null);
+  const selectedFileRef = useRef(null); // Persist file across re-renders
+  const isSendingMessageRef = useRef(false); // Flag to prevent fetch during message send
+  const lastSentMessageIdRef = useRef(null); // Track last sent message ID
 
   const token = localStorage.getItem("access_token");
   if (!token) console.warn("No JWT token found in localStorage.");
 
-  // Handle right-click / long-press on a message
-  const handleMessageContext = (e, msgId) => {
-    e.preventDefault(); // prevent default context menu
-    setMenuState({ visible: true, msgId });
-  };
-
+  // Request notification permission on mount
   useEffect(() => {
-    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-
-    fetch("/sounds/notify.mp3")
-      .then(res => res.arrayBuffer())
-      .then(arrayBuffer => audioContextRef.current.decodeAudioData(arrayBuffer))
-      .then(decodedData => {
-        audioBufferRef.current = decodedData;
-      })
-      .catch(err => console.error("Failed to load audio:", err));
-
-    const unlockAudio = () => {
-      if (audioContextRef.current.state === "suspended") audioContextRef.current.resume();
-      window.removeEventListener("click", unlockAudio);
-    };
-    window.addEventListener("click", unlockAudio);
-
-    return () => window.removeEventListener("click", unlockAudio);
-  }, []);
-
-  const playNotificationSound = () => {
-    if (!audioBufferRef.current || !audioContextRef.current) return;
-    const source = audioContextRef.current.createBufferSource();
-    source.buffer = audioBufferRef.current;
-    source.connect(audioContextRef.current.destination);
-    source.start(0);
-  };
-
-  useEffect(() => {
-    if ("Notification" in window) {
-      setNotificationPermission(Notification.permission);
-      if (Notification.permission === "default") {
-        Notification.requestPermission().then(permission => setNotificationPermission(permission));
-      }
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('✅ Notification permission granted');
+        } else {
+          console.log('❌ Notification permission denied');
+        }
+      });
     }
   }, []);
 
-  useEffect(() => {
-    const handleFocus = () => {
-      windowFocused.current = true;
-      if (selectedChat) setUnreadCounts(prev => ({ ...prev, [selectedChat]: 0 }));
-    };
-    const handleBlur = () => (windowFocused.current = false);
-    const handleVisibilityChange = () => {
-      if (!document.hidden && selectedChat) setUnreadCounts(prev => ({ ...prev, [selectedChat]: 0 }));
-    };
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("blur", handleBlur);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("blur", handleBlur);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [selectedChat]);
+  // Helper function to show browser notification
+  const showNotification = (title, body, icon = null) => {
+    if (!('Notification' in window)) {
+      console.log('This browser does not support notifications');
+      return;
+    }
 
+    if (Notification.permission === 'granted') {
+      // Check if page is visible - only show notification if page is hidden
+      if (document.hidden) {
+        new Notification(title, {
+          body: body,
+          icon: icon || '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: 'chat-message', // Replace previous notifications with same tag
+        });
+      }
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted' && document.hidden) {
+          new Notification(title, {
+            body: body,
+            icon: icon || '/favicon.ico',
+            badge: '/favicon.ico',
+            tag: 'chat-message',
+          });
+        }
+      });
+    }
+  };
+
+  // Fetch logged-in user & user list
   useEffect(() => {
     if (!token) return;
 
-    fetch(`http://192.168.1.154:8001/api/auth/user/`, {
+    fetch(`${API_BASE.replace("/chat", "")}/auth/user/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
-      .then(data => setCurrentUser(data.username))
+      .then(data => {
+        setCurrentUser(data.username);
+        setCurrentUserId(data.id);
+      })
       .catch(err => console.error("Error fetching user:", err));
 
     fetchUsers();
+    fetchConversations();
   }, [token]);
 
   const fetchUsers = () => {
     if (!token) return;
+
     fetch(`${API_BASE}/users/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -116,301 +140,488 @@ const Chats = () => {
       .catch(err => console.error("Failed to fetch users:", err));
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages[selectedChat]]);
+  const fetchConversations = () => {
+    if (!token) return;
 
-  const showBrowserNotification = (sender, messageContent) => {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const notification = new Notification(`New message from ${sender}`, {
-      body: messageContent.length > 50 ? messageContent.substring(0, 50) + "..." : messageContent,
-      icon: "/favicon.ico",
-      tag: `chat-${sender}`,
-    });
-    notification.onclick = () => {
-      window.focus();
-      setSelectedChat(sender);
-      notification.close();
-    };
-    setTimeout(() => notification.close(), 5000);
+    fetch(`${API_BASE}/conversations/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setConversations(data))
+      .catch(err => console.error("Failed to fetch conversations:", err));
   };
 
+
+  const markAsRead = (conversationId) => {
+    if (!token || !conversationId) return;
+
+    fetch(`${API_BASE}/conversations/${conversationId}/mark-read/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => {
+        if (res.ok) {
+          setConversations(prev =>
+            prev.map(conv =>
+              conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
+            )
+          );
+        }
+      })
+      .catch(err => console.error("Failed to mark as read:", err));
+  };
+
+  // Fetch conversation details when selected
   useEffect(() => {
-    if (!selectedChat || !currentUser || !token) return;
+    if (!selectedConversation || !token) return;
 
-    fetchChatHistory(selectedChat);
+    fetch(`${API_BASE}/conversations/${selectedConversation.id}/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        setConversationDetails(data);
+        // Check if current user is admin
+        const currentUserParticipant = data.participants.find(p => p.username === currentUser);
+        setIsAdmin(currentUserParticipant?.role === 'admin' || data.created_by === currentUser);
 
-    const wsUrl = `ws://192.168.1.154:8001/ws/chat/${selectedChat}/?token=${token}`;
+        // Mark as read when selected
+        markAsRead(selectedConversation.id);
+      })
+      .catch(err => console.error("Failed to fetch conversation details:", err));
+  }, [selectedConversation, token, currentUser]);
+
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages[selectedConversation?.id]]);
+
+  // WebSocket connection for selected conversation
+  useEffect(() => {
+    if (!selectedConversation || !currentUser || !token) return;
+
+    // Only fetch if we're not currently sending a message
+    if (!isSendingMessageRef.current) {
+      fetchConversationMessages(selectedConversation.id);
+    }
+
+    const backendBase = getBackendBaseUrl();
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsHost = backendBase.replace(/^https?:\/\//, '');
+    const wsUrl = `${wsProtocol}://${wsHost}/ws/chat/${selectedConversation.id}/?token=${token}`;
+
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
-    socket.onopen = () => console.log("✅ WebSocket connected");
+    socket.onopen = () => {
+      console.log("✅ WebSocket connected");
+    };
 
-    socket.onmessage = event => {
-      const data = JSON.parse(event.data);
+    socket.onerror = (error) => {
+      console.error("❌ WebSocket error:", error);
+    };
 
-      if (data.type === "chat_message") {
-        if (data.sender === currentUser) return;
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
 
-        const newMsg = {
-          id: crypto.randomUUID(),
-          sender: data.sender,
-          content: data.message,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          isMe: false,
-          avatar: "💬",
-        };
+        if (data.type === "chat_message") {
+          const convId = selectedConversation.id;
+          const isFromMe = data.sender === currentUser;
 
-        setChatMessages(prev => {
-          const msgs = prev[data.sender] || [];
-          return { ...prev, [data.sender]: [...msgs, newMsg] };
-        });
+          if (isFromMe && isSendingMessageRef.current) {
+            return;
+          }
 
-        const shouldNotify = selectedChat !== data.sender || !windowFocused.current || document.hidden;
-        if (shouldNotify) {
-          setUnreadCounts(prev => ({ ...prev, [data.sender]: (prev[data.sender] || 0) + 1 }));
-          playNotificationSound();
-          showBrowserNotification(data.sender, data.message);
+          if (!isFromMe) {
+            const notificationTitle = selectedConversation.type === 'group'
+              ? `${data.sender} in ${selectedConversation.name}`
+              : data.sender;
+            const notificationBody = data.message || (data.attachment ? `📎 ${data.attachment.name}` : 'New message');
+            showNotification(notificationTitle, notificationBody);
+          }
+
+          if (!isFromMe && selectedConversation?.id === convId) {
+            markAsRead(convId);
+          }
+
+          setChatMessages(prev => {
+            const msgs = prev[convId] || [];
+            const messageId = data.message_id || data.temp_id;
+
+            const exists = msgs.some(m => !m.temp && (m.id === messageId || String(m.id) === String(messageId)));
+            if (exists) return prev;
+
+            let attachment = data.attachment;
+            if (attachment && attachment.url && !attachment.url.startsWith('http')) {
+              attachment = { ...attachment, url: `${getBackendBaseUrl()}${attachment.url.startsWith('/') ? '' : '/'}${attachment.url}` };
+            }
+
+            const newMsg = {
+              id: messageId || generateUUID(),
+              sender: data.sender,
+              content: data.message || (attachment ? `📎 ${attachment.name}` : ""),
+              time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              isMe: isFromMe,
+              avatar: isFromMe ? "👤" : "💬",
+              attachment: attachment || null,
+            };
+
+            return { ...prev, [convId]: [...msgs, newMsg] };
+          });
         }
-      }
 
-      if (data.type === "typing") {
-        setTypingUsers(prev => [...new Set([...prev, data.sender])]);
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => {
-          setTypingUsers(prev => prev.filter(u => u !== data.sender));
-        }, 1500);
-      }
+        if (data.type === "message_edited") {
+          setChatMessages(prev => {
+            const msgs = prev[selectedConversation.id] || [];
+            return {
+              ...prev,
+              [selectedConversation.id]: msgs.map(m =>
+                m.id === data.message_id ? { ...m, content: data.content, edited_at: data.edited_at } : m
+              ),
+            };
+          });
+        }
 
-      if (data.type === "delete_message") {
-        setChatMessages(prev => ({
-          ...prev,
-          [data.chat]: prev[data.chat]?.filter(msg => msg.id !== data.message_id) || []
-        }));
-      }
+        if (data.type === "message_deleted") {
+          setChatMessages(prev => {
+            const msgs = prev[selectedConversation.id] || [];
+            return {
+              ...prev,
+              [selectedConversation.id]: msgs.map(m =>
+                m.id === data.message_id ? { ...m, content: "[Message deleted]", is_deleted: true } : m
+              ),
+            };
+          });
+        }
 
-      fetchUsers();
+        if (data.type === "typing") {
+          setTypingUsers(prev => [...new Set([...prev, data.sender])]);
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => {
+            setTypingUsers(prev => prev.filter(u => u !== data.sender));
+          }, 1500);
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
     };
 
-    socket.onerror = error => console.error("WebSocket error:", error);
-    socket.onclose = () => console.log("❌ WebSocket closed");
-
-    return () => {
-      if (socket.readyState === WebSocket.OPEN) socket.close();
+    socket.onclose = () => {
+      console.log("❌ WebSocket closed");
     };
-  }, [selectedChat, currentUser, token]);
 
-  const fetchChatHistory = username => {
-    fetch(`${API_BASE}/history/${username}/`, { headers: { Authorization: `Bearer ${token}` } })
+    return () => socket.close();
+  }, [selectedConversation, currentUser, token]);
+
+  const fetchConversationMessages = (conversationId, mergeMode = false) => {
+    if (!conversationId || !token) return;
+    if (isSendingMessageRef.current && mergeMode === false) return;
+
+    fetch(`${API_BASE}/conversations/${conversationId}/history/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(res => res.json())
       .then(data => {
-        const formatted = data.map(msg => ({
-          id: msg.id,
-          sender: msg.sender,
-          content: msg.content,
-          time: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          isMe: msg.sender === currentUser,
-          avatar: msg.sender === currentUser ? "👤" : "💬",
-        }));
-        setChatMessages(prev => ({ ...prev, [username]: formatted }));
+        const formatted = data.map(msg => {
+          let attachment = msg.attachment;
+          if (attachment && attachment.url && !attachment.url.startsWith('http')) {
+            attachment = { ...attachment, url: `${getBackendBaseUrl()}${attachment.url.startsWith('/') ? '' : '/'}${attachment.url}` };
+          }
+
+          return {
+            id: msg.id,
+            sender: msg.sender,
+            content: msg.content,
+            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isMe: msg.is_me,
+            avatar: msg.is_me ? "👤" : "💬",
+            edited_at: msg.edited_at,
+            is_deleted: msg.is_deleted,
+            attachment: attachment,
+          };
+        });
+
+        setChatMessages(prev => {
+          const existing = prev[conversationId] || [];
+          const savedIds = new Set(formatted.map(m => String(m.id)));
+          const temps = existing.filter(m => m.temp);
+          const deduped = [...formatted, ...temps.filter(t => !savedIds.has(String(t.id)))];
+          return { ...prev, [conversationId]: deduped.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)) };
+        });
       })
-      .catch(err => console.error("Failed to load chat history:", err));
+      .catch(err => console.error("Failed to load messages:", err));
   };
 
-  const sendMessage = () => {
-    if (!message.trim() || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) return alert("File size must be less than 10MB");
+      setSelectedFile(file);
+      selectedFileRef.current = file;
+    }
+  };
 
-    const tempId = crypto.randomUUID();
-    const payload = {
-      type: "chat_message",
-      sender: currentUser,
-      receiver: selectedChat,
-      message: message.trim(),
-      temp_id: tempId,
-    };
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "0 B";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
 
+  const sendMessage = async () => {
+    const fileToUse = selectedFile || selectedFileRef.current;
+    if ((!message.trim() && !fileToUse) || !selectedConversation) return;
+
+    const messageContent = message.trim();
+    isSendingMessageRef.current = true;
+    setMessage("");
+    setSelectedFile(null);
+    selectedFileRef.current = null;
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    const tempId = generateUUID();
     setChatMessages(prev => ({
       ...prev,
-      [selectedChat]: [
-        ...(prev[selectedChat] || []),
-        {
-          id: tempId,
-          sender: currentUser,
-          content: payload.message,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          isMe: true,
-          avatar: "👤",
-          temp: true,
-        },
+      [selectedConversation.id]: [
+        ...(prev[selectedConversation.id] || []),
+        { id: tempId, sender: currentUser, content: messageContent || (fileToUse ? `📎 ${fileToUse.name}` : ""), time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), isMe: true, avatar: "👤", temp: true, attachment: fileToUse ? { name: fileToUse.name, size: fileToUse.size } : null },
       ],
     }));
 
-    socketRef.current.send(JSON.stringify(payload));
-    setMessage("");
+    try {
+      const formData = new FormData();
+      if (messageContent) formData.append("message", messageContent);
+      if (fileToUse) formData.append("attachment", fileToUse);
+
+      const response = await fetch(`${API_BASE}/conversations/${selectedConversation.id}/send/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const saved = await response.json();
+        setChatMessages(prev => {
+          const msgs = (prev[selectedConversation.id] || []).filter(m => m.id !== tempId);
+          let attachment = saved.attachment;
+          if (attachment && attachment.url && !attachment.url.startsWith('http')) {
+            attachment = { ...attachment, url: `${getBackendBaseUrl()}${attachment.url.startsWith('/') ? '' : '/'}${attachment.url}` };
+          }
+          return { ...prev, [selectedConversation.id]: [...msgs, { id: saved.id, sender: saved.sender, content: saved.content, time: new Date(saved.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), isMe: true, avatar: "👤", attachment }] };
+        });
+        fetchConversations();
+      }
+    } catch (err) {
+      console.error("Error sending message:", err);
+    } finally {
+      isSendingMessageRef.current = false;
+    }
   };
 
-  const handleKeyPress = e => {
+  const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: "typing", sender: currentUser, receiver: selectedChat }));
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: "typing", sender: currentUser, conversation_id: selectedConversation?.id }));
     }
   };
 
-  // Delete functions
-  const deleteMessageForMe = (msgId) => {
-    if (!selectedChat) return;
-    setChatMessages(prev => ({
-      ...prev,
-      [selectedChat]: prev[selectedChat].filter(msg => msg.id !== msgId)
-    }));
-    toast.success("Deleted for you", { autoClose: 2000 });
-    setMenuState({ visible: false, msgId: null });
+  const createDirectChat = (userId) => {
+    fetch(`${API_BASE}/conversations/create-direct/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ user_id: userId }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.id) {
+          setShowCreateDirectModal(false);
+          fetchConversations();
+          setSelectedConversation(data);
+        }
+      });
   };
 
-  const deleteMessageForEveryone = (msgId) => {
-    if (!selectedChat) return;
-    setChatMessages(prev => ({
-      ...prev,
-      [selectedChat]: prev[selectedChat].filter(msg => msg.id !== msgId)
-    }));
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({
-        type: "delete_message",
-        message_id: msgId,
-        chat: selectedChat,
-        delete_for_everyone: true
-      }));
+  const createGroupChat = () => {
+    fetch(`${API_BASE}/conversations/create-group/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: groupName.trim(), participant_ids: selectedParticipants }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.id) {
+          setShowCreateGroupModal(false);
+          setGroupName("");
+          setSelectedParticipants([]);
+          fetchConversations();
+          setSelectedConversation(data);
+        }
+      });
+  };
+
+  const toggleParticipant = (userId) => {
+    setSelectedParticipants(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  };
+
+  const editMessage = (id, content) => {
+    setEditingMessageId(id);
+    setEditMessageContent(content);
+  };
+
+  const saveEditedMessage = async () => {
+    const response = await fetch(`${API_BASE}/conversations/${selectedConversation.id}/messages/${editingMessageId}/edit/`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ message: editMessageContent.trim() }),
+    });
+    if (response.ok) {
+      setEditingMessageId(null);
+      fetchConversationMessages(selectedConversation.id, true);
     }
-    toast.success("Deleted for everyone", { autoClose: 2000 });
-    setMenuState({ visible: false, msgId: null });
   };
 
-  useEffect(() => {
-    const handleClickOutside = () => setMenuState({ visible: false, msgId: null });
-    window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
-  }, []);
+  const deleteMessage = async (id) => {
+    if (!confirm("Are you sure?")) return;
+    const response = await fetch(`${API_BASE}/conversations/${selectedConversation.id}/messages/${id}/delete/`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) fetchConversationMessages(selectedConversation.id, true);
+  };
 
-  const filteredUsers = users
-    .filter(u => u.username !== currentUser)
-    .filter(u => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
-
-  const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
-
-  useEffect(() => {
-    const baseTitle = "Chat";
-    document.title = totalUnread > 0 ? `(${totalUnread}) ${baseTitle}` : baseTitle;
-  }, [totalUnread]);
+  const filteredConversations = conversations.filter(conv =>
+    conv.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="chat-container">
-      {notificationPermission === "default" && (
-        <div
-          style={{ background: "#4CAF50", color: "white", padding: "10px", textAlign: "center", cursor: "pointer" }}
-          onClick={() => Notification.requestPermission().then(permission => setNotificationPermission(permission))}
-        >
-          🔔 Click here to enable desktop notifications
-        </div>
-      )}
-
       <div className="chat-sidebar">
         <div className="chat-header">
           <div className="chat-header-left">
             <div className="chat-logo"><span>✨</span></div>
-            <h1>Chat {totalUnread > 0 && `(${totalUnread})`}</h1>
+            <h1>Chat</h1>
           </div>
-          <button className="create-chat-btn" title="Create new chat">
-            <Plus size={16} /><span>Create Chat</span>
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="create-chat-btn" onClick={() => setShowCreateDirectModal(true)}><Plus size={14} /><span>Private</span></button>
+            <button className="create-chat-btn" onClick={() => setShowCreateGroupModal(true)}><Users size={14} /><span>Group</span></button>
+          </div>
         </div>
-
         <div className="search-bar">
-          <input type="text" placeholder="Search users..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search conversations..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
-
         <div className="recent-chats-section">
-          <h2>Users</h2>
+          <h2>Conversations</h2>
           <div className="recent-chats-list">
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map(user => (
-                <div
-                  key={user.id}
-                  onClick={() => { setSelectedChat(user.username); setUnreadCounts(prev => ({ ...prev, [user.username]: 0 })); }}
-                  className={`chat-item ${selectedChat === user.username ? "selected" : ""}`}
-                >
-                  <div className="chat-avatar"><span>👤</span></div>
-                  <div className="chat-info">
-                    <p className="chat-name">{user.username}</p>
-                    <p className="chat-last-msg">{user.last_message?.slice(0, 25) || "No messages yet"}</p>
-                  </div>
-                  {unreadCounts[user.username] > 0 && <span className="unread-badge">{unreadCounts[user.username]}</span>}
+            {filteredConversations.map(conv => (
+              <div key={conv.id} onClick={() => setSelectedConversation(conv)} className={`chat-item ${selectedConversation?.id === conv.id ? "selected" : ""}`}>
+                <div className="chat-avatar">{conv.is_group ? <Users size={20} /> : <span>👤</span>}</div>
+                <div className="chat-info">
+                  <p className="chat-name">{conv.name}</p>
+                  <p className="chat-last-msg">{conv.last_message}</p>
                 </div>
-              ))
-            ) : (
-              <div style={{ padding: "10px" }}>No users found</div>
-            )}
+                {conv.unread_count > 0 && <span className="unread-badge">{conv.unread_count}</span>}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Chat main */}
       <div className="chat-main">
-        {selectedChat ? (
+        {selectedConversation ? (
           <>
             <div className="chat-main-header">
               <div className="chat-main-header-content">
-                <div className="current-chat-avatar"><span>{selectedChat[0]}</span></div>
+                <div className="current-chat-avatar">{selectedConversation.is_group ? <Users size={24} /> : <span>{selectedConversation.name ? selectedConversation.name[0] : "?"}</span>}</div>
                 <div className="current-chat-info">
-                  <h2>{selectedChat}</h2>
-                  {typingUsers.includes(selectedChat) && <p>Typing...</p>}
-                  {typingUsers.length === 0 && <p>Active now</p>}
+                  <h2>{selectedConversation.name}</h2>
+                  <p>{selectedConversation.is_group ? "Group chat" : "Private conversation"}</p>
                 </div>
               </div>
             </div>
-
             <div className="messages-container">
-              {(chatMessages[selectedChat] || []).map(msg => (
-                <div
-                  key={msg.id}
-                  className={`message-wrapper ${msg.isMe ? "my-message" : "other-message"}`}
-                  onContextMenu={(e) => handleMessageContext(e, msg.id)}
-                >
+              {(chatMessages[selectedConversation.id] || []).map(msg => (
+                <div key={msg.id} className={`message-wrapper ${msg.isMe ? "my-message" : "other-message"}`} onMouseEnter={() => setHoveredMessageId(msg.id)} onMouseLeave={() => setHoveredMessageId(null)}>
                   <div className="message-content">
                     <div className="message-avatar">{msg.avatar}</div>
                     <div className="message-bubble-wrapper">
                       <div className={`message-bubble ${msg.isMe ? "my-bubble" : "other-bubble"}`}>
+                        {msg.attachment && <div className="message-attachment"><File size={16} /><div className="attachment-info"><a href={msg.attachment.url} target="_blank" rel="noreferrer" className="attachment-link">{msg.attachment.name}</a><span className="attachment-size">{formatFileSize(msg.attachment.size)}</span></div><a href={msg.attachment.url} download className="attachment-download"><Download size={14} /></a></div>}
                         <p>{msg.content}</p>
                       </div>
-                      <p className="message-info">{msg.sender} • {msg.time}</p>
+                      <div className="message-info-row">
+                        <p className="message-info">{msg.sender} • {msg.time}</p>
+                        {msg.isMe && hoveredMessageId === msg.id && !msg.is_deleted && (
+                          <div className="message-actions">
+                            <button className="message-action-btn" onClick={() => editMessage(msg.id, msg.content)}><Edit2 size={14} /></button>
+                            <button className="message-action-btn" onClick={() => deleteMessage(msg.id)}><Trash2 size={14} /></button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  {/* WhatsApp-style popover */}
-                  {menuState.visible && menuState.msgId === msg.id && (
-                    <div className="message-menu left" onClick={(e) => e.stopPropagation()}>
-                      {msg.isMe && <button onClick={() => deleteMessageForMe(msg.id)}>Delete for me</button>}
-                      <button onClick={() => deleteMessageForEveryone(msg.id)}>Delete for everyone</button>
-                    </div>
-                  )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
-
             <div className="message-input-container">
+              {selectedFile && <div className="selected-file-preview"><File size={16} /><span>{selectedFile.name}</span><button onClick={() => setSelectedFile(null)} className="remove-file-btn"><X size={14} /></button></div>}
               <div className="message-input-wrapper">
-                <button className="input-icon-btn" title="Attachment" disabled><Paperclip size={20} /></button>
-                <textarea value={message} onChange={e => setMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder="Message" className="message-input" rows={1} />
-                <button className="input-icon-btn" title="Voice" disabled><Mic size={20} /></button>
-                <button onClick={sendMessage} className={`send-btn ${!message.trim() ? "disabled" : ""}`} disabled={!message.trim()} title="Send"><Send size={20} /></button>
+                <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} />
+                <button className="input-icon-btn" onClick={() => fileInputRef.current?.click()}><Paperclip size={20} /></button>
+                <textarea value={message} onChange={e => setMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type a message..." className="message-input" rows={1} />
+                <button onClick={sendMessage} className="send-btn"><Send size={20} /></button>
               </div>
             </div>
           </>
-        ) : <div className="no-chat-selected"></div>}
+        ) : (
+          <div style={{ padding: "40px", textAlign: "center" }}>
+            <p>👈 Select a conversation to start chatting</p>
+            <p style={{ marginTop: "10px", color: "#666" }}>Click "Private" or "Group" to start a new conversation</p>
+          </div>
+        )}
       </div>
+
+      {showCreateGroupModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h2>Create Group Chat</h2><button onClick={() => setShowCreateGroupModal(false)}><X size={20} /></button></div>
+            <div className="modal-body">
+              <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Group Name" className="form-input" />
+              <div className="participants-list">
+                {users.filter(u => u.id !== currentUserId).map(user => (
+                  <div key={user.id} className={`participant-item ${selectedParticipants.includes(user.id) ? "selected" : ""}`} onClick={() => toggleParticipant(user.id)}>
+                    <input type="checkbox" checked={selectedParticipants.includes(user.id)} readOnly />
+                    <span>{user.username}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer"><button className="btn-primary" onClick={createGroupChat}>Create</button></div>
+          </div>
+        </div>
+      )}
+
+      {showCreateDirectModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateDirectModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h2>Start Private Chat</h2><button onClick={() => setShowCreateDirectModal(false)}><X size={20} /></button></div>
+            <div className="modal-body">
+              <div className="participants-list">
+                {users.filter(u => u.id !== currentUserId).map(user => (
+                  <div key={user.id} className="participant-item" onClick={() => createDirectChat(user.id)}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{user.username[0].toUpperCase()}</div>
+                    <span>{user.username}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

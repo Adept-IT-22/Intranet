@@ -2,17 +2,16 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-from chat.models import ChatMessage
+from .models import ChatMessage, Conversation
 
 User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # The "username" is passed in the URL via routing.py
-        self.chat_username = self.scope['url_route']['kwargs']['username']
-        self.room_group_name = f'chat_{self.chat_username}'
+        self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
+        self.room_group_name = f'chat_{self.conversation_id}'
 
-        # Join the user-specific group
+        # Join conversation group
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -20,7 +19,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Leave the group on disconnect
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
@@ -29,56 +27,39 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
         msg_type = data.get('type')
-        sender = data.get('sender')
-        receiver = data.get('receiver')
+        sender_username = data.get('sender')
 
         if msg_type == "chat_message":
             message = data.get('message')
-
-            # Save the message in DB
-            await self.save_message(sender, receiver, message)
-
-            # Send only to the receiver group (HTTP polling handles the rest)
+            # The actual saving is often handled via HTTP POST for reliability and file support
+            # but we broadcast it here for real-time updates.
             await self.channel_layer.group_send(
-                f'chat_{receiver}',
+                self.room_group_name,
                 {
-                    'type': 'chat_message',
+                    'type': 'chat_message_broadcast',
                     'message': message,
-                    'sender': sender,
+                    'sender': sender_username,
                 }
             )
 
         elif msg_type == "typing":
-            # Notify the receiver that the sender is typing
             await self.channel_layer.group_send(
-                f'chat_{receiver}',
+                self.room_group_name,
                 {
-                    'type': 'typing',
-                    'sender': sender,
+                    'type': 'typing_broadcast',
+                    'sender': sender_username,
                 }
             )
 
-    # --- Event Handlers for messages coming from group_send ---
-    async def chat_message(self, event):
+    async def chat_message_broadcast(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
             'message': event['message'],
             'sender': event['sender'],
         }))
 
-    async def typing(self, event):
+    async def typing_broadcast(self, event):
         await self.send(text_data=json.dumps({
             'type': 'typing',
             'sender': event['sender'],
         }))
-
-    # --- DB helper ---
-    @database_sync_to_async
-    def save_message(self, sender_username, receiver_username, message):
-        sender = User.objects.get(username=sender_username)
-        receiver = User.objects.get(username=receiver_username)
-        return ChatMessage.objects.create(
-            sender=sender,
-            receiver=receiver,
-            message=message  
-        )

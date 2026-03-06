@@ -1,6 +1,6 @@
 # PowerShell script to fix login issues
 param(
-    [string]$ServerIP = "192.168.1.154",
+    [string]$ServerIP = "172.171.244.92",
     [string]$Username = "administrator",
     [string]$Password = "R00t@4321!"
 )
@@ -51,8 +51,8 @@ docker-compose ps
 
 echo ""
 echo "✅ Login fix attempt completed!"
-echo "🌐 Frontend: http://192.168.1.154:8080"
-echo "🔗 Backend API: http://192.168.1.154:8001/api/"
+echo "🌐 Frontend: http://172.171.244.92:8080"
+echo "🔗 Backend API: http://172.171.244.92:8001/api/"
 '@
 
 # Upload and run the script
@@ -74,7 +74,7 @@ try {
 } catch {
     Write-Host "❌ Error: $_" -ForegroundColor Red
     Write-Host "Manual steps:" -ForegroundColor Yellow
-    Write-Host "1. SSH: ssh administrator@192.168.1.154" -ForegroundColor Yellow
+    Write-Host "1. SSH: ssh administrator@172.171.244.92" -ForegroundColor Yellow
     Write-Host "2. Run: cd /home/administrator/Intranet" -ForegroundColor Yellow
     Write-Host "3. Run: docker-compose down && docker-compose up -d --build" -ForegroundColor Yellow
 } finally {

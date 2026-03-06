@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://192.168.1.154:8001/api/", // Always use server IP
+  baseURL: "/api", // Relative path for Nginx proxy or current host
 });
 
 // ✅ Always attach the token if available

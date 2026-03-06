@@ -1,11 +1,13 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from .models import ChatMessage
+from .models import ChatMessage, Conversation
 from .serializers import UserSerializer, ChatMessageSerializer
+import uuid
 
 User = get_user_model()
 
@@ -18,106 +20,145 @@ def chat_users(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def chat_history(request, username):
-    other_user = get_object_or_404(User, username=username)
+def list_conversations(request):
+    conversations = request.user.conversations.all().order_by("-updated_at")
+    data = []
+    for conv in conversations:
+        last_msg = conv.messages.all().order_by("-timestamp").first()
+        other_user = None
+        if not conv.is_group:
+            other_user = conv.participants.exclude(id=request.user.id).first()
+        
+        data.append({
+            "id": str(conv.id),
+            "name": conv.name or (other_user.username if other_user else "Unknown"),
+            "is_group": conv.is_group,
+            "last_message": last_msg.content if last_msg else "No messages yet",
+            "timestamp": last_msg.timestamp if last_msg else conv.updated_at,
+            "unread_count": conv.messages.filter(is_read=False).exclude(sender=request.user).count()
+        })
+    return Response(data)
 
-    # Fetch messages between current user & other_user
-    messages = ChatMessage.objects.filter(
-        Q(sender=request.user, receiver=other_user) |
-        Q(sender=other_user, receiver=request.user)
-    ).order_by("timestamp")
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_direct_conversation(request):
+    user_id = request.data.get("user_id")
+    other_user = get_object_or_404(User, id=user_id)
+    
+    # Check if a direct conversation already exists
+    conv = Conversation.objects.filter(is_group=False, participants=request.user).filter(participants=other_user).first()
+    
+    if not conv:
+        conv = Conversation.objects.create(is_group=False)
+        conv.participants.add(request.user, other_user)
+    
+    return Response({"id": str(conv.id), "name": other_user.username, "is_group": False})
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_group_conversation(request):
+    name = request.data.get("name")
+    participant_ids = request.data.get("participant_ids", [])
+    
+    conv = Conversation.objects.create(name=name, is_group=True)
+    conv.participants.add(request.user)
+    for p_id in participant_ids:
+        conv.participants.add(p_id)
+        
+    return Response({"id": str(conv.id), "name": conv.name, "is_group": True})
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_conversation_history(request, conversation_id):
+    conv = get_object_or_404(Conversation, id=conversation_id)
+    messages = conv.messages.all().order_by("timestamp")
+    
     return Response([
         {
             "id": msg.id,
             "sender": msg.sender.username,
-            "receiver": msg.receiver.username,
-            "content": msg.message,  # Frontend expects 'content'
-            "message": msg.message,  # Also include 'message' for compatibility
+            "content": msg.content,
             "timestamp": msg.timestamp,
             "is_read": msg.is_read,
+            "is_me": msg.sender == request.user,
+            "attachment": {
+                "name": msg.attachment.name,
+                "url": msg.attachment.url,
+                "size": msg.attachment.size
+            } if msg.attachment else None
         }
         for msg in messages
     ])
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def user_list(request):
-    users = User.objects.exclude(id=request.user.id)
-    serializer = UserSerializer(users, many=True)
-    return Response(serializer.data)
+def get_conversation_details(request, conversation_id):
+    conv = get_object_or_404(Conversation, id=conversation_id)
+    return Response({
+        "id": str(conv.id),
+        "name": conv.name or conv.participants.exclude(id=request.user.id).first().username,
+        "is_group": conv.is_group,
+        "participants": [
+            {
+                "id": p.id,
+                "username": p.username,
+                "role": "admin" if p == request.user else "member" # Simplified
+            } for p in conv.participants.all()
+        ],
+        "created_at": conv.created_at
+    })
 
-@api_view(["GET"])
+@api_view(["PUT"])
 @permission_classes([IsAuthenticated])
-def get_messages(request, user_id):
-    other_user = User.objects.get(id=user_id)
-    messages = ChatMessage.objects.filter(
-        sender__in=[request.user, other_user],
-        receiver__in=[request.user, other_user]
-    ).order_by("timestamp")
-    serializer = ChatMessageSerializer(messages, many=True)
-    return Response(serializer.data)
+def edit_chat_message(request, conversation_id, message_id):
+    msg = get_object_or_404(ChatMessage, id=message_id, conversation_id=conversation_id, sender=request.user)
+    content = request.data.get("message")
+    if content:
+        msg.content = content
+        msg.save()
+    return Response({"id": msg.id, "content": msg.content})
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_chat_message(request, conversation_id, message_id):
+    msg = get_object_or_404(ChatMessage, id=message_id, conversation_id=conversation_id, sender=request.user)
+    msg.delete()
+    return Response({"message": "Deleted"})
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def send_message(request, username):
-    other_user = get_object_or_404(User, username=username)
-    message_content = request.data.get("message")
+@parser_classes([MultiPartParser, FormParser])
+def send_message_to_conversation(request, conversation_id):
+    conv = get_object_or_404(Conversation, id=conversation_id)
+    content = request.data.get("message", "")
+    attachment = request.FILES.get("attachment")
     
-    if not message_content:
-        return Response({"error": "Message content required"}, status=400)
-    
-    chat_message = ChatMessage.objects.create(
+    msg = ChatMessage.objects.create(
+        conversation=conv,
         sender=request.user,
-        receiver=other_user,
-        message=message_content
+        content=content,
+        attachment=attachment
     )
+    conv.save() # Update updated_at
     
     return Response({
-        "id": chat_message.id,
-        "sender": chat_message.sender.username,
-        "receiver": chat_message.receiver.username,
-        "content": chat_message.message,
-        "timestamp": chat_message.timestamp,
-        "is_read": chat_message.is_read,
+        "id": msg.id,
+        "sender": msg.sender.username,
+        "content": msg.content,
+        "timestamp": msg.timestamp,
+        "attachment": {
+            "name": msg.attachment.name,
+            "url": msg.attachment.url,
+            "size": msg.attachment.size
+        } if msg.attachment else None
     })
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def send_message_http(request, username):
-    """Send message via HTTP POST (more reliable than WebSocket)"""
-    other_user = get_object_or_404(User, username=username)
-    message_content = request.data.get("message")
+def mark_conversation_as_read(request, conversation_id):
+    conv = get_object_or_404(Conversation, id=conversation_id)
+    if request.user not in conv.participants.all():
+        return Response({"error": "Unauthorized"}, status=403)
     
-    if not message_content:
-        return Response({"error": "Message content required"}, status=400)
-    
-    # Create message
-    chat_message = ChatMessage.objects.create(
-        sender=request.user,
-        receiver=other_user,
-        message=message_content
-    )
-    
-    return Response({
-        "id": chat_message.id,
-        "sender": chat_message.sender.username,
-        "receiver": chat_message.receiver.username,
-        "content": chat_message.message,
-        "timestamp": chat_message.timestamp,
-        "success": True
-    }, status=201)
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def mark_messages_as_read(request, username):
-    other_user = get_object_or_404(User, username=username)
-    
-    # Update messages to mark as read
-    ChatMessage.objects.filter(
-        sender=other_user,
-        receiver=request.user,
-        is_read=False
-    ).update(is_read=True)
-    
-    return Response({"message": f"Marked messages from {username} as read ✅"})
+    conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+    return Response({"message": "Conversation marked as read"})

@@ -1,10 +1,10 @@
 # Deploy to Linux Server Script
-# Server: 192.168.1.154
+# Server: 172.171.244.92
 # Username: administrator
 
-Write-Host "🚀 Deploying to Linux Server (192.168.1.154)..." -ForegroundColor Green
+Write-Host "🚀 Deploying to Linux Server (172.171.244.92)..." -ForegroundColor Green
 
-$serverIP = "192.168.1.154"
+$serverIP = "172.171.244.92"
 $username = "administrator"
 $password = "R00t@4321!"
 
@@ -60,8 +60,8 @@ docker-compose ps
 
 # Show access URLs
 echo "🌐 Application URLs:"
-echo "Frontend: http://192.168.1.154:8080"
-echo "Backend API: http://192.168.1.154:8001"
+echo "Frontend: http://172.171.244.92:8080"
+echo "Backend API: http://172.171.244.92:8001"
 echo "Database: localhost:5433"
 
 echo "✅ Deployment complete!"
@@ -81,12 +81,12 @@ try {
     
     Write-Host "✅ Deployment completed successfully!" -ForegroundColor Green
     Write-Host "🌐 Your application is now available at:" -ForegroundColor Cyan
-    Write-Host "   Frontend: http://192.168.1.154:8080" -ForegroundColor White
-    Write-Host "   Backend API: http://192.168.1.154:8001" -ForegroundColor White
+    Write-Host "   Frontend: http://172.171.244.92:8080" -ForegroundColor White
+    Write-Host "   Backend API: http://172.171.244.92:8001" -ForegroundColor White
     Write-Host "   Database: localhost:5433" -ForegroundColor White
     
 } catch {
     Write-Host "❌ Deployment failed. Please check the error above." -ForegroundColor Red
     Write-Host "💡 You can also manually SSH to the server and run the commands." -ForegroundColor Yellow
-    Write-Host "   SSH Command: ssh administrator@192.168.1.154" -ForegroundColor Gray
+    Write-Host "   SSH Command: ssh administrator@172.171.244.92" -ForegroundColor Gray
 }

@@ -19,7 +19,7 @@ const App = () => {
   useEffect(() => {
     const handler = () => {
       const audio = new Audio("/sounds/notify.mp3");
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
       window.removeEventListener("click", handler);
     };
 
@@ -39,7 +39,7 @@ const App = () => {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />}>
           <Route index element={<Home />} />
-          <Route path="chats" element={<SimpleChat />} />
+          <Route path="chats" element={<Chats />} />
           <Route path="documents" element={<Documents />} />
           <Route path="employee-directory" element={<EmployeeDirectory />} />
           <Route path="it-support" element={<ITSupport />} />

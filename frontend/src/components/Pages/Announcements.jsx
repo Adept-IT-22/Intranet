@@ -1,6 +1,5 @@
-// CorporateAnnouncements.jsx
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../api";
 import {
   Container,
   Typography,
@@ -20,27 +19,36 @@ import {
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
 
-const API_BASE = "http://192.168.1.154:8001/api";
-
 const CorporateAnnouncements = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [token, setToken] = useState(localStorage.getItem("accessToken"));
-  const [refreshToken, setRefreshToken] = useState(localStorage.getItem("refreshToken"));
+  const [token, setToken] = useState(localStorage.getItem("access_token"));
+  const [refreshToken, setRefreshToken] = useState(localStorage.getItem("refresh_token"));
   const [announcements, setAnnouncements] = useState([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
   const [deleteId, setDeleteId] = useState(null);
+  const [userRole, setUserRole] = useState("");
+
+  // Fetch current user to check role
+  useEffect(() => {
+    if (!token) return;
+    api.get("/auth/user/", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => setUserRole(res.data.role))
+      .catch(err => console.error("Error fetching user role:", err));
+  }, [token]);
 
   // Login to get JWT
   const handleLogin = () => {
-    axios.post(`${API_BASE}/token/`, { username, password })
+    api.post("/token/", { username, password })
       .then(res => {
         setToken(res.data.access);
         setRefreshToken(res.data.refresh);
-        localStorage.setItem("accessToken", res.data.access);
-        localStorage.setItem("refreshToken", res.data.refresh);
+        localStorage.setItem("access_token", res.data.access);
+        localStorage.setItem("refresh_token", res.data.refresh);
         setError("");
         fetchAnnouncements(res.data.access);
       })
@@ -49,22 +57,22 @@ const CorporateAnnouncements = () => {
 
   // Fetch announcements
   const fetchAnnouncements = (accessToken) => {
-    axios.get(`${API_BASE}/announcements/`, {
+    api.get("/announcements/", {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
-    .then(res => setAnnouncements(res.data))
-    .catch(err => {
-      if (err.response?.status === 401 && refreshToken) refreshAccessToken();
-      else console.error(err);
-    });
+      .then(res => setAnnouncements(res.data))
+      .catch(err => {
+        if (err.response?.status === 401 && refreshToken) refreshAccessToken();
+        else console.error(err);
+      });
   };
 
   // Refresh JWT token
   const refreshAccessToken = () => {
-    axios.post(`${API_BASE}/token/refresh/`, { refresh: refreshToken })
+    api.post("/token/refresh/", { refresh: refreshToken })
       .then(res => {
         setToken(res.data.access);
-        localStorage.setItem("accessToken", res.data.access);
+        localStorage.setItem("access_token", res.data.access);
         fetchAnnouncements(res.data.access);
       })
       .catch(() => setError("Session expired. Please login again."));
@@ -77,8 +85,8 @@ const CorporateAnnouncements = () => {
       return;
     }
 
-    axios.post(
-      `${API_BASE}/announcements/`,
+    api.post(
+      "/announcements/",
       {
         title: title,
         summary: content,                  // match serializer field
@@ -87,31 +95,31 @@ const CorporateAnnouncements = () => {
       },
       { headers: { Authorization: `Bearer ${token}` } }
     )
-    .then(res => {
-      setAnnouncements([res.data, ...announcements]);
-      setTitle("");
-      setContent("");
-      setError("");
-    })
-    .catch(err => {
-      if (err.response?.status === 401 && refreshToken) refreshAccessToken();
-      else setError("Failed to post announcement.");
-    });
+      .then(res => {
+        setAnnouncements([res.data, ...announcements]);
+        setTitle("");
+        setContent("");
+        setError("");
+      })
+      .catch(err => {
+        if (err.response?.status === 401 && refreshToken) refreshAccessToken();
+        else setError("Failed to post announcement.");
+      });
   };
 
   // Delete announcement
   const handleDeleteAnnouncement = (id) => {
-    axios.delete(`${API_BASE}/announcements/${id}/`, {
+    api.delete(`/announcements/${id}/`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    .then(() => {
-      setAnnouncements(announcements.filter(a => a.id !== id));
-      setDeleteId(null);
-    })
-    .catch(err => {
-      if (err.response?.status === 401 && refreshToken) refreshAccessToken();
-      else setError("Failed to delete announcement.");
-    });
+      .then(() => {
+        setAnnouncements(announcements.filter(a => a.id !== id));
+        setDeleteId(null);
+      })
+      .catch(err => {
+        if (err.response?.status === 401 && refreshToken) refreshAccessToken();
+        else setError("Failed to delete announcement.");
+      });
   };
 
   // Fetch announcements on component mount if token exists
@@ -148,7 +156,7 @@ const CorporateAnnouncements = () => {
           </Box>
         )}
 
-        {token && (
+        {token && userRole === "superadmin" && (
           <Box>
             <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
               Post New Announcement
@@ -185,9 +193,11 @@ const CorporateAnnouncements = () => {
               <Box key={a.id}>
                 <ListItem
                   secondaryAction={
-                    <IconButton edge="end" color="error" onClick={() => setDeleteId(a.id)}>
-                      <Delete />
-                    </IconButton>
+                    userRole === "superadmin" && (
+                      <IconButton edge="end" color="error" onClick={() => setDeleteId(a.id)}>
+                        <Delete />
+                      </IconButton>
+                    )
                   }
                 >
                   <ListItemText

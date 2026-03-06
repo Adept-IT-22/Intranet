@@ -1,6 +1,6 @@
 # PowerShell script to check users on the Linux server
 param(
-    [string]$ServerIP = "192.168.1.154",
+    [string]$ServerIP = "172.171.244.92",
     [string]$Username = "administrator"
 )
 
@@ -75,7 +75,7 @@ try {
 } catch {
     Write-Host "❌ Error running user check: $_" -ForegroundColor Red
     Write-Host "You can also run this manually on your server:" -ForegroundColor Yellow
-    Write-Host "1. SSH into your server: ssh administrator@192.168.1.154" -ForegroundColor Yellow
+    Write-Host "1. SSH into your server: ssh administrator@172.171.244.92" -ForegroundColor Yellow
     Write-Host "2. Run: cd /home/administrator/Intranet" -ForegroundColor Yellow
     Write-Host "3. Run: python3 check-users-simple.py" -ForegroundColor Yellow
 }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import api from "../../api";
 
 const ITSupport = () => {
   const [ticket, setTicket] = useState({
@@ -29,16 +30,9 @@ const ITSupport = () => {
         return;
       }
 
-      const res = await fetch("http://192.168.1.154:8001/api/support/tickets/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // ✅ must be Bearer for SimpleJWT
-        },
-        body: JSON.stringify(ticket),
-      });
+      const res = await api.post("/support/tickets/", ticket);
 
-      if (res.ok) {
+      if (res.status === 201 || res.status === 200) {
         setStatus("success");
         setTicket({
           title: "",

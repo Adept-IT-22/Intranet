@@ -1,7 +1,7 @@
 # 🚀 Manual Server Deployment Guide
 
 ## Server Details
-- **IP**: 192.168.1.154
+- **IP**: 172.171.244.92
 - **Username**: administrator
 - **Password**: R00t@4321!
 
@@ -9,7 +9,7 @@
 
 ### Step 1: Connect to Server
 ```bash
-ssh administrator@192.168.1.154
+ssh administrator@172.171.244.92
 # Password: R00t@4321!
 ```
 
@@ -77,8 +77,8 @@ docker-compose logs frontend
 
 After successful deployment, your application will be available at:
 
-- **Frontend**: http://192.168.1.154:8080
-- **Backend API**: http://192.168.1.154:8001
+- **Frontend**: http://172.171.244.92:8080
+- **Backend API**: http://172.171.244.92:8001
 - **Database**: localhost:5433 (PostgreSQL)
 - **Redis**: localhost:6379
 

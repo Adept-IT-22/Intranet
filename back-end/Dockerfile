@@ -24,7 +24,7 @@ RUN mkdir -p static
 # Collect static files
 RUN python manage.py collectstatic --noinput --settings=backend.settings_azure
 
-# Expose port 8000
+# Expose port 8001
 EXPOSE 8000
 
 # Use gunicorn for production

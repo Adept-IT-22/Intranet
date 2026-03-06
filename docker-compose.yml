@@ -8,7 +8,6 @@ services:
     container_name: intranet-backend
     command: >
       sh -c "
-      pip install django-ngrok ngrok &&
       python manage.py migrate &&
       daphne -b 0.0.0.0 -p 8000 backend.asgi:application"
     ports:
@@ -24,19 +23,24 @@ services:
       - POSTGRES_HOST=db
       - NGROK_AUTH_TOKEN=328yKQblyTdYYT8nvHiOLLjIplu_2N6NpqMXV7iV6dWiDVFNc
   
+    volumes:
+      - ./back-end:/app
     depends_on:
       - db
       - redis
 
   frontend:
-   build:
-    context: ./frontend
-    dockerfile: Dockerfile
-   container_name: intranet-frontend
-   ports:
-    - "8080:80"   
-   depends_on:
-    - backend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: intranet-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "8080:80"   
+    depends_on:
+      - backend
 
   
   db:

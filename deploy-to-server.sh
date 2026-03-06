@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Automated Deployment Script for Linux Server
-# Server: 192.168.1.154
+# Server: 172.171.244.92
 # Username: administrator
 
 echo "🚀 Starting deployment to Linux server..."
 
 # Server details
-SERVER_IP="192.168.1.154"
+SERVER_IP="172.171.244.92"
 SERVER_USER="administrator"
 SERVER_PASS="R00t@4321!"
 
@@ -71,8 +71,8 @@ docker-compose ps
 
 # Show access URLs
 echo "🌐 Application URLs:"
-echo "Frontend: http://192.168.1.154:8080"
-echo "Backend API: http://192.168.1.154:8001"
+echo "Frontend: http://172.171.244.92:8080"
+echo "Backend API: http://172.171.244.92:8001"
 echo "Database: localhost:5433"
 
 echo "✅ Deployment complete!"
@@ -84,12 +84,12 @@ chmod +x server-deploy.sh
 echo "📤 Uploading to server..."
 
 # Upload to server using scp
-scp -r . administrator@192.168.1.154:/home/administrator/
+scp -r . administrator@172.171.244.92:/home/administrator/
 
 echo "🔧 Running deployment on server..."
 
 # Execute deployment on server
-ssh administrator@192.168.1.154 << 'REMOTE_EOF'
+ssh administrator@172.171.244.92 << 'REMOTE_EOF'
 cd /home/administrator/Intranet
 chmod +x server-deploy.sh
 ./server-deploy.sh
@@ -97,5 +97,5 @@ REMOTE_EOF
 
 echo "✅ Deployment completed!"
 echo "🌐 Your application should be available at:"
-echo "   Frontend: http://192.168.1.154:8080"
-echo "   Backend: http://192.168.1.154:8001"
+echo "   Frontend: http://172.171.244.92:8080"
+echo "   Backend: http://172.171.244.92:8001"

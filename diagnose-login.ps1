@@ -1,6 +1,6 @@
 # PowerShell script to diagnose login issues
 param(
-    [string]$ServerIP = "192.168.1.154",
+    [string]$ServerIP = "172.171.244.92",
     [string]$Username = "administrator"
 )
 

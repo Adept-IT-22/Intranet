@@ -13,7 +13,7 @@ ALLOWED_HOSTS = [
     '*.azurewebsites.net',
     'localhost',
     '127.0.0.1',
-    '192.168.1.154',
+    '172.171.244.92',
     'backend',  # Docker container name
 ]
 
@@ -59,16 +59,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.1.154:8080",
-    "http://192.168.1.154:80",
+    "http://172.171.244.92:8080",
+    "http://172.171.244.92:80",
     "http://localhost:8080",
     "http://localhost:80",
     "http://frontend:80",  # Docker container name
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://192.168.1.154:8080",
-    "http://192.168.1.154:80",
+    "http://172.171.244.92:8080",
+    "http://172.171.244.92:80",
     "http://localhost:8080",
     "http://localhost:80",
     "http://frontend:80",  # Docker container name

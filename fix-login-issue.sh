@@ -41,5 +41,5 @@ docker-compose ps
 
 echo ""
 echo "✅ Login fix attempt completed!"
-echo "🌐 Frontend: http://192.168.1.154:8080"
-echo "🔗 Backend API: http://192.168.1.154:8001/api/"
+echo "🌐 Frontend: http://172.171.244.92:8080"
+echo "🔗 Backend API: http://172.171.244.92:8001/api/"
