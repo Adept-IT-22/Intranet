@@ -682,6 +682,27 @@ const Chats = () => {
         )}
       </div>
 
+      {showCreateDirectModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateDirectModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>New Private Chat</h2>
+              <button onClick={() => setShowCreateDirectModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="participants-list">
+                {users.filter(u => u.id !== currentUserId).map(user => (
+                  <div key={user.id} className="participant-item" onClick={() => createDirectChat(user.id)}>
+                    <div className="participant-avatar">{user.username[0].toUpperCase()}</div>
+                    <span>{user.username}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCreateGroupModal && (
         <div className="modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
