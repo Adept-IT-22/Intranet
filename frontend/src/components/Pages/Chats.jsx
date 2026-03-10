@@ -59,6 +59,8 @@ const Chats = () => {
   const fileInputRef = useRef(null);
 
   const socketRef = useRef(null);
+  const notificationSocketRef = useRef(null);
+  const selectedConversationRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const selectedFileRef = useRef(null); // Persist file across re-renders
@@ -68,49 +70,93 @@ const Chats = () => {
   const token = localStorage.getItem("access_token");
   if (!token) console.warn("No JWT token found in localStorage.");
 
+  // Keep ref up to date for websocket message handlers
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
+
   // Request notification permission on mount
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          console.log('✅ Notification permission granted');
-        } else {
-          console.log('❌ Notification permission denied');
-        }
-      });
+      Notification.requestPermission();
     }
   }, []);
 
   // Helper function to show browser notification
   const showNotification = (title, body, icon = null) => {
-    if (!('Notification' in window)) {
-      console.log('This browser does not support notifications');
-      return;
-    }
+    if (!('Notification' in window)) return;
 
     if (Notification.permission === 'granted') {
-      // Check if page is visible - only show notification if page is hidden
-      if (document.hidden) {
-        new Notification(title, {
-          body: body,
-          icon: icon || '/favicon.ico',
-          badge: '/favicon.ico',
-          tag: 'chat-message', // Replace previous notifications with same tag
-        });
-      }
-    } else if (Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted' && document.hidden) {
-          new Notification(title, {
-            body: body,
-            icon: icon || '/favicon.ico',
-            badge: '/favicon.ico',
-            tag: 'chat-message',
-          });
-        }
+      // Show notification if page is hidden OR if we're in a different conversation
+      new Notification(title, {
+        body: body,
+        icon: icon || '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'chat-message',
       });
     }
   };
+
+  // General Notification Socket for sidebar updates
+  useEffect(() => {
+    if (!token || !currentUser) return;
+
+    const backendBase = getBackendBaseUrl();
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsHost = backendBase.replace(/^https?:\/\//, '');
+    const wsUrl = `${wsProtocol}://${wsHost}/ws/notifications/?token=${token}`;
+
+    const nSocket = new WebSocket(wsUrl);
+    notificationSocketRef.current = nSocket;
+
+    nSocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "new_message_notification") {
+          const isFromMe = data.sender === currentUser;
+          const currentConv = selectedConversationRef.current;
+
+          // 1. Update Sidebar
+          setConversations(prev => {
+            const convIndex = prev.findIndex(c => String(c.id) === String(data.conversation_id));
+            let updatedConv;
+
+            if (convIndex !== -1) {
+              updatedConv = {
+                ...prev[convIndex],
+                last_message: data.message,
+                timestamp: data.timestamp,
+                unread_count: (currentConv?.id === data.conversation_id || isFromMe)
+                  ? prev[convIndex].unread_count
+                  : (prev[convIndex].unread_count || 0) + 1
+              };
+            } else {
+              updatedConv = {
+                id: data.conversation_id,
+                name: data.conversation_name || data.sender,
+                last_message: data.message,
+                is_group: data.is_group,
+                unread_count: (currentConv?.id === data.conversation_id || isFromMe) ? 0 : 1,
+                timestamp: data.timestamp
+              };
+            }
+
+            const filtered = prev.filter(c => String(c.id) !== String(data.conversation_id));
+            return [updatedConv, ...filtered];
+          });
+
+          // 2. Show Desktop Notification if background or different chat
+          if (!isFromMe && (document.hidden || currentConv?.id !== data.conversation_id)) {
+            showNotification(data.conversation_name || data.sender, data.message);
+          }
+        }
+      } catch (err) {
+        console.error("Error in notification socket:", err);
+      }
+    };
+
+    return () => nSocket.close();
+  }, [token, currentUser]);
 
   // Fetch logged-in user & user list
   useEffect(() => {

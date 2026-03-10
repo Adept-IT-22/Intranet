@@ -8,6 +8,8 @@ from django.db.models import Q
 from .models import ChatMessage, Conversation
 from .serializers import UserSerializer, ChatMessageSerializer
 import uuid
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 User = get_user_model()
 
@@ -148,6 +150,34 @@ def send_message_to_conversation(request, conversation_id):
         attachment=attachment
     )
     conv.save() # Update updated_at
+    
+    # Broadcast to websocket
+    channel_layer = get_channel_layer()
+    
+    # 1. Broadcast to the specific conversation group
+    async_to_sync(channel_layer.group_send)(
+        f'chat_{conversation_id}',
+        {
+            'type': 'chat_message_broadcast',
+            'message': msg.content,
+            'sender': msg.sender.username,
+        }
+    )
+    
+    # 2. Broadcast notification to ALL participants (for sidebar/desktop notifications)
+    for participant in conv.participants.all():
+        async_to_sync(channel_layer.group_send)(
+            f'user_{participant.id}',
+            {
+                'type': 'notify_new_message',
+                'message': msg.content or "Sent an attachment",
+                'sender': msg.sender.username,
+                'conversation_id': str(conv.id),
+                'conversation_name': conv.name or request.user.username if conv.is_group else request.user.username, # simplified
+                'is_group': conv.is_group,
+                'timestamp': str(msg.timestamp)
+            }
+        )
     
     return Response({
         "id": msg.id,
