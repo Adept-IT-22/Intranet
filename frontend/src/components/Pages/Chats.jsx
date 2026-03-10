@@ -56,6 +56,7 @@ const Chats = () => {
   const [editingGroupName, setEditingGroupName] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
   const fileInputRef = useRef(null);
 
   const socketRef = useRef(null);
@@ -66,9 +67,15 @@ const Chats = () => {
   const selectedFileRef = useRef(null); // Persist file across re-renders
   const isSendingMessageRef = useRef(false); // Flag to prevent fetch during message send
   const lastSentMessageIdRef = useRef(null); // Track last sent message ID
+  const notificationAudioRef = useRef(null);
 
   const token = localStorage.getItem("access_token");
   if (!token) console.warn("No JWT token found in localStorage.");
+
+  // Initialize audio for notifications
+  useEffect(() => {
+    notificationAudioRef.current = new Audio("/sounds/notify.mp3");
+  }, []);
 
   // Keep ref up to date for websocket message handlers
   useEffect(() => {
@@ -122,13 +129,15 @@ const Chats = () => {
             let updatedConv;
 
             if (convIndex !== -1) {
+              const prevConv = prev[convIndex];
               updatedConv = {
-                ...prev[convIndex],
+                ...prevConv,
+                name: data.conversation_name || prevConv.name,
                 last_message: data.message,
                 timestamp: data.timestamp,
                 unread_count: (currentConv?.id === data.conversation_id || isFromMe)
-                  ? prev[convIndex].unread_count
-                  : (prev[convIndex].unread_count || 0) + 1
+                  ? prevConv.unread_count
+                  : (prevConv.unread_count || 0) + 1
               };
             } else {
               updatedConv = {
@@ -145,9 +154,12 @@ const Chats = () => {
             return [updatedConv, ...filtered];
           });
 
-          // 2. Show Desktop Notification if background or different chat
-          if (!isFromMe && (document.hidden || currentConv?.id !== data.conversation_id)) {
-            showNotification(data.conversation_name || data.sender, data.message);
+          // 2. Play Sound and Show Desktop Notification if background or different chat
+          if (!isFromMe) {
+            notificationAudioRef.current?.play().catch(() => { });
+            if (document.hidden || currentConv?.id !== data.conversation_id) {
+              showNotification(data.conversation_name || data.sender, data.message);
+            }
           }
         }
       } catch (err) {
@@ -278,14 +290,6 @@ const Chats = () => {
 
           if (isFromMe && isSendingMessageRef.current) {
             return;
-          }
-
-          if (!isFromMe) {
-            const notificationTitle = selectedConversation.type === 'group'
-              ? `${data.sender} in ${selectedConversation.name}`
-              : data.sender;
-            const notificationBody = data.message || (data.attachment ? `📎 ${data.attachment.name}` : 'New message');
-            showNotification(notificationTitle, notificationBody);
           }
 
           if (!isFromMe && selectedConversation?.id === convId) {
@@ -604,8 +608,21 @@ const Chats = () => {
     conv.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const requestPermission = () => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    }
+  };
+
   return (
     <div className="chat-container">
+      {notificationPermission !== 'granted' && (
+        <div className="notification-prompt" onClick={requestPermission}>
+          🔔 Notifications are {notificationPermission === 'default' ? 'not enabled' : 'blocked'}. Click here to enable desktop alerts and sounds.
+        </div>
+      )}
       <div className="chat-sidebar">
         <div className="chat-header">
           <div className="chat-header-left">
