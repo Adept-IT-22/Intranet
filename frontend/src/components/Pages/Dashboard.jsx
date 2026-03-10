@@ -27,16 +27,100 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [totalChatUnread, setTotalChatUnread] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1000);
+  const [notificationPermission, setNotificationPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const getBackendBaseUrl = () => {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+    if (window.location.port === '5173' || window.location.port === '3000' || window.location.port === '8080') {
+      return `${protocol}://${hostname}:8001`;
+    }
+    return `${protocol}://${hostname}${window.location.port ? `:${window.location.port}` : ""}`;
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1000);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const notificationAudioRef = React.useRef(null);
+
+  useEffect(() => {
+    notificationAudioRef.current = new Audio("/sounds/notify.mp3");
+  }, []);
+
+  const requestPermission = () => {
+    if (typeof Notification !== 'undefined') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    }
+  };
+
+  const showNotification = (title, body) => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.ico', tag: 'chat-message' });
+    }
+  };
+
+  // Fetch unread chat count & Subscribe to notifications
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token || !user) return;
+
+    const fetchCount = () => {
+      fetch("/api/chat/unread-count/", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => setTotalChatUnread(data.unread_count))
+        .catch(err => console.error("Error fetching unread count:", err));
+    };
+
+    fetchCount();
+
+    const backendBase = getBackendBaseUrl();
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsHost = backendBase.replace(/^https?:\/\//, '');
+    const wsUrl = `${wsProtocol}://${wsHost}/ws/notifications/?token=${token}`;
+
+    const nSocket = new WebSocket(wsUrl);
+    nSocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "new_message_notification") {
+          fetchCount();
+          // Check if it's from someone else
+          if (data.sender !== user.username) {
+            notificationAudioRef.current?.play().catch(() => { });
+
+            // Only show desktop notification if hidden OR on another page OR in a different chat
+            const activeChatId = localStorage.getItem('active_chat_id');
+            const isDifferentChat = String(activeChatId) !== String(data.conversation_id);
+            const isNotOnChatsPage = !location.pathname.includes('/dashboard/chats');
+
+            if (document.hidden || isNotOnChatsPage || isDifferentChat) {
+              showNotification(data.conversation_name || data.sender, data.message);
+            }
+          }
+        } else if (data.type === "messages_read_notification") {
+          fetchCount();
+        }
+      } catch (err) {
+        console.error("Error in dashboard notification socket:", err);
+      }
+    };
+
+    return () => nSocket.close();
+  }, [user, location.pathname]);
 
   // ✅ Logout function
   const handleLogout = () => {
@@ -92,128 +176,141 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'Open Sans', sans-serif" }}>
-      {/* Sidebar */}
-      <aside style={styles.sidebar}>
-        <nav style={styles.nav}>
-          {sidebarLinks.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              title={item.label}
-              style={({ isActive }) => ({
-                ...styles.link,
-                backgroundColor: isActive ? "rgba(255,255,255,0.15)" : "transparent",
-                borderRadius: "10px",
-                padding: "8px",
-              })}
-            >
-              {item.icon}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "'Open Sans', sans-serif" }}>
+      {notificationPermission !== "granted" && (
+        <div style={styles.notificationBanner} onClick={requestPermission}>
+          🔔 Notifications are {notificationPermission === "denied" ? "blocked" : "disabled"}. Click here to enable desktop alerts and sounds.
+        </div>
+      )}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        {/* Sidebar */}
+        <aside style={styles.sidebar}>
+          <nav style={styles.nav}>
+            {sidebarLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                title={item.label}
+                style={({ isActive }) => ({
+                  ...styles.link,
+                  backgroundColor: isActive ? "rgba(255,255,255,0.15)" : "transparent",
+                  borderRadius: "10px",
+                  padding: "8px",
+                  position: "relative",
+                })}
+              >
+                {item.icon}
+                {item.label === "Chats" && totalChatUnread > 0 && (
+                  <span style={styles.badge}>
+                    {totalChatUnread > 99 ? "99+" : totalChatUnread}
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+        </aside>
 
-      {/* Main content wrapper */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f7f9fc" }}>
-        {/* Header */}
-        <header style={styles.header}>
-          {/* Logo (hidden on mobile/narrow screens) */}
-          {!isMobile && (
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <img
-                src={logo}
-                alt="Adept Technologies Logo"
-                style={{ height: "180px", objectFit: "contain", marginRight: "20px" }}
+        {/* Main content wrapper */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f7f9fc" }}>
+          {/* Header */}
+          <header style={styles.header}>
+            {/* Logo (hidden on mobile/narrow screens) */}
+            {!isMobile && (
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <img
+                  src={logo}
+                  alt="Adept Technologies Logo"
+                  style={{ height: "180px", objectFit: "contain", marginRight: "20px" }}
+                />
+              </div>
+            )}
+
+            {/* Search bar */}
+            <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={styles.search}
               />
             </div>
-          )}
 
-          {/* Search bar */}
-          <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={styles.search}
-            />
-          </div>
-
-          {/* User info on the right */}
-          <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
-            {user ? (
-              <>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: "600", color: "#333", fontSize: "14px" }}>{user.username}</div>
-                  <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                    {user.role || "Member"}
+            {/* User info on the right */}
+            <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
+              {user ? (
+                <>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontWeight: "600", color: "#333", fontSize: "14px" }}>{user.username}</div>
+                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                      {user.role || "Member"}
+                    </div>
                   </div>
-                </div>
 
-                {/* Notification Bell */}
-                <div style={{ position: "relative" }}>
-                  <button
-                    style={{
-                      position: "relative",
-                      padding: "8px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      borderRadius: "50%",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#333",
-                    }}
-                    title="Notifications"
+                  {/* Notification Bell */}
+                  <div style={{ position: "relative" }}>
+                    <button
+                      style={{
+                        position: "relative",
+                        padding: "8px",
+                        backgroundColor: "transparent",
+                        border: "none",
+                        borderRadius: "50%",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#333",
+                      }}
+                      title="Notifications"
+                    >
+                      <FaBell size={20} />
+                    </button>
+                  </div>
+
+                  <div
+                    onClick={() => setShowProfileModal(true)}
+                    style={{ cursor: "pointer", position: "relative" }}
                   >
-                    <FaBell size={20} />
+                    {getAvatarDisplay()}
+                  </div>
+
+                  {/* Logout button */}
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      background: "#dc3545",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "10px 20px",
+                      cursor: "pointer",
+                      fontSize: "0.95rem",
+                      fontWeight: "600",
+                      transition: "background-color 0.2s",
+                    }}
+                    onMouseOver={(e) => (e.target.style.backgroundColor = "#c82333")}
+                    onMouseOut={(e) => (e.target.style.backgroundColor = "#dc3545")}
+                  >
+                    Logout
                   </button>
-                </div>
-
-                <div
-                  onClick={() => setShowProfileModal(true)}
-                  style={{ cursor: "pointer", position: "relative" }}
-                >
-                  {getAvatarDisplay()}
-                </div>
-
-                {/* Logout button */}
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    background: "#dc3545",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "10px 20px",
-                    cursor: "pointer",
-                    fontSize: "0.95rem",
-                    fontWeight: "600",
-                    transition: "background-color 0.2s",
-                  }}
-                  onMouseOver={(e) => (e.target.style.backgroundColor = "#c82333")}
-                  onMouseOut={(e) => (e.target.style.backgroundColor = "#dc3545")}
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <span style={{ color: "#666" }}>Loading...</span>
-            )}
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main style={styles.main}>
-          {location.pathname === "/dashboard" && (
-            <div style={styles.greetingsCard}>
-              <GreetingsBar username={user?.username} />
+                </>
+              ) : (
+                <span style={{ color: "#666" }}>Loading...</span>
+              )}
             </div>
-          )}
-          <Outlet />
-        </main>
+          </header>
+
+          {/* Main Content */}
+          <main style={styles.main}>
+            {location.pathname === "/dashboard" && (
+              <div style={styles.greetingsCard}>
+                <GreetingsBar username={user?.username} />
+              </div>
+            )}
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -253,6 +350,25 @@ const styles = {
     color: "white",
     textDecoration: "none",
     transition: "0.3s",
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: "-5px",
+    right: "-5px",
+    backgroundColor: "#e11d48",
+    color: "white",
+    borderRadius: "10px",
+    padding: "2px 6px",
+    fontSize: "10px",
+    fontWeight: "bold",
+    minWidth: "16px",
+    textAlign: "center",
+    border: "2px solid #1B467A",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
   },
   header: {
     height: "80px",
@@ -287,6 +403,17 @@ const styles = {
     padding: "20px",
     overflowY: "auto",
     background: "#f7f9fc",
+  },
+  notificationBanner: {
+    backgroundColor: "#2563eb",
+    color: "white",
+    padding: "10px 20px",
+    textAlign: "center",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "600",
+    zIndex: 1000,
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
   },
   greetingsCard: {
     background: "#fff",

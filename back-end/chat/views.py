@@ -22,6 +22,15 @@ def chat_users(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def unread_total_count(request):
+    count = ChatMessage.objects.filter(
+        conversation__participants=request.user,
+        is_read=False
+    ).exclude(sender=request.user).count()
+    return Response({"unread_count": count})
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def list_conversations(request):
     conversations = request.user.conversations.all().order_by("-updated_at")
     data = []
@@ -166,6 +175,16 @@ def send_message_to_conversation(request, conversation_id):
     
     # 2. Broadcast notification to ALL participants (for sidebar/desktop notifications)
     for participant in conv.participants.all():
+        # For non-group chats, the "conversation name" for any participant is the OTHER person's name.
+        # It's easier for the backend to send the sender's info and let the frontend handle naming
+        # or send a tailored name for each participant.
+        
+        target_name = conv.name # Use group name if it exists
+        if not conv.is_group:
+            # For the participant, the conversation name is the name of the OTHER person
+            other = conv.participants.exclude(id=participant.id).first()
+            target_name = other.username if other else "Unknown"
+
         async_to_sync(channel_layer.group_send)(
             f'user_{participant.id}',
             {
@@ -173,7 +192,7 @@ def send_message_to_conversation(request, conversation_id):
                 'message': msg.content or "Sent an attachment",
                 'sender': msg.sender.username,
                 'conversation_id': str(conv.id),
-                'conversation_name': conv.name or request.user.username if conv.is_group else request.user.username, # simplified
+                'conversation_name': target_name,
                 'is_group': conv.is_group,
                 'timestamp': str(msg.timestamp)
             }
@@ -199,6 +218,17 @@ def mark_conversation_as_read(request, conversation_id):
         return Response({"error": "Unauthorized"}, status=403)
     
     conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+    
+    # Notify user's other tabs/dashboard that unread count has changed
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'user_{request.user.id}',
+        {
+            'type': 'notify_messages_read',
+            'conversation_id': str(conv.id),
+        }
+    )
+    
     return Response({"message": "Conversation marked as read"})
 
 @api_view(["PUT"])

@@ -95,3 +95,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'is_group': event['is_group'],
             'timestamp': event['timestamp']
         }))
+    async def notify_messages_read(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'messages_read_notification',
+            'conversation_id': event['conversation_id']
+        }))

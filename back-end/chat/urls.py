@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('users/', views.chat_users, name='chat_users'),
+    path('unread-count/', views.unread_total_count, name='unread_total_count'),
     path('conversations/', views.list_conversations, name='list_conversations'),
     path('conversations/create-direct/', views.create_direct_conversation, name='create_direct_conversation'),
     path('conversations/create-group/', views.create_group_conversation, name='create_group_conversation'),

@@ -56,7 +56,6 @@ const Chats = () => {
   const [editingGroupName, setEditingGroupName] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
   const fileInputRef = useRef(null);
 
   const socketRef = useRef(null);
@@ -66,20 +65,18 @@ const Chats = () => {
   const typingTimeoutRef = useRef(null);
   const selectedFileRef = useRef(null); // Persist file across re-renders
   const isSendingMessageRef = useRef(false); // Flag to prevent fetch during message send
-  const lastSentMessageIdRef = useRef(null); // Track last sent message ID
-  const notificationAudioRef = useRef(null);
-
   const token = localStorage.getItem("access_token");
   if (!token) console.warn("No JWT token found in localStorage.");
-
-  // Initialize audio for notifications
-  useEffect(() => {
-    notificationAudioRef.current = new Audio("/sounds/notify.mp3");
-  }, []);
 
   // Keep ref up to date for websocket message handlers
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
+    if (selectedConversation) {
+      localStorage.setItem('active_chat_id', selectedConversation.id);
+    } else {
+      localStorage.removeItem('active_chat_id');
+    }
+    return () => localStorage.removeItem('active_chat_id');
   }, [selectedConversation]);
 
   // Request notification permission on mount
@@ -89,20 +86,6 @@ const Chats = () => {
     }
   }, []);
 
-  // Helper function to show browser notification
-  const showNotification = (title, body, icon = null) => {
-    if (!('Notification' in window)) return;
-
-    if (Notification.permission === 'granted') {
-      // Show notification if page is hidden OR if we're in a different conversation
-      new Notification(title, {
-        body: body,
-        icon: icon || '/favicon.ico',
-        badge: '/favicon.ico',
-        tag: 'chat-message',
-      });
-    }
-  };
 
   // General Notification Socket for sidebar updates
   useEffect(() => {
@@ -119,6 +102,16 @@ const Chats = () => {
     nSocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        if (data.type === "messages_read_notification") {
+          setConversations(prev => prev.map(c =>
+            String(c.id) === String(data.conversation_id)
+              ? { ...c, unread_count: 0 }
+              : c
+          ));
+          return;
+        }
+
         if (data.type === "new_message_notification") {
           const isFromMe = data.sender === currentUser;
           const currentConv = selectedConversationRef.current;
@@ -154,12 +147,12 @@ const Chats = () => {
             return [updatedConv, ...filtered];
           });
 
-          // 2. Play Sound and Show Desktop Notification if background or different chat
-          if (!isFromMe) {
-            notificationAudioRef.current?.play().catch(() => { });
-            if (document.hidden || currentConv?.id !== data.conversation_id) {
-              showNotification(data.conversation_name || data.sender, data.message);
-            }
+          // Mark as read immediately if we are currently viewing this chat
+          if (currentConv?.id === data.conversation_id && !isFromMe) {
+            fetch(`${API_BASE}/conversations/${data.conversation_id}/mark-read/`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` }
+            }).catch(err => console.error("Error marking as read on message arrival:", err));
           }
         }
       } catch (err) {
@@ -608,21 +601,9 @@ const Chats = () => {
     conv.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const requestPermission = () => {
-    if ('Notification' in window) {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-      });
-    }
-  };
 
   return (
     <div className="chat-container">
-      {notificationPermission !== 'granted' && (
-        <div className="notification-prompt" onClick={requestPermission}>
-          🔔 Notifications are {notificationPermission === 'default' ? 'not enabled' : 'blocked'}. Click here to enable desktop alerts and sounds.
-        </div>
-      )}
       <div className="chat-sidebar">
         <div className="chat-header">
           <div className="chat-header-left">
