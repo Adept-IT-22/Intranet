@@ -28,10 +28,9 @@ export default function Dashboard() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [totalChatUnread, setTotalChatUnread] = useState(0);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1000);
-  const [notificationPermission, setNotificationPermission] = useState(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
-  );
+
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,13 +56,7 @@ export default function Dashboard() {
     notificationAudioRef.current = new Audio("/sounds/notify.mp3");
   }, []);
 
-  const requestPermission = () => {
-    if (typeof Notification !== 'undefined') {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-      });
-    }
-  };
+
 
   const showNotification = (title, body) => {
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -83,9 +76,25 @@ export default function Dashboard() {
         .then(res => res.json())
         .then(data => setTotalChatUnread(data.unread_count))
         .catch(err => console.error("Error fetching unread count:", err));
+
+      fetch("/api/announcements/", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          const readIds = JSON.parse(localStorage.getItem("read_announcements") || "[]");
+          const unread = data.filter(a => !readIds.includes(a.id)).length;
+          setUnreadAnnouncements(unread);
+        })
+        .catch(err => console.error("Error fetching announcements for badge:", err));
     };
 
     fetchCount();
+
+    const handleAnnouncementsRead = () => {
+      fetchCount();
+    };
+    window.addEventListener("announcementsRead", handleAnnouncementsRead);
 
     const backendBase = getBackendBaseUrl();
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -119,7 +128,10 @@ export default function Dashboard() {
       }
     };
 
-    return () => nSocket.close();
+    return () => {
+      nSocket.close();
+      window.removeEventListener("announcementsRead", handleAnnouncementsRead);
+    };
   }, [user, location.pathname]);
 
   // ✅ Logout function
@@ -177,11 +189,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "'Open Sans', sans-serif" }}>
-      {notificationPermission !== "granted" && (
-        <div style={styles.notificationBanner} onClick={requestPermission}>
-          🔔 Notifications are {notificationPermission === "denied" ? "blocked" : "disabled"}. Click here to enable desktop alerts and sounds.
-        </div>
-      )}
+
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Sidebar */}
         <aside style={styles.sidebar}>
@@ -203,6 +211,11 @@ export default function Dashboard() {
                 {item.label === "Chats" && totalChatUnread > 0 && (
                   <span style={styles.badge}>
                     {totalChatUnread > 99 ? "99+" : totalChatUnread}
+                  </span>
+                )}
+                {item.label === "Announcements" && unreadAnnouncements > 0 && (
+                  <span style={styles.badge}>
+                    {unreadAnnouncements > 99 ? "99+" : unreadAnnouncements}
                   </span>
                 )}
               </NavLink>
@@ -404,17 +417,7 @@ const styles = {
     overflowY: "auto",
     background: "#f7f9fc",
   },
-  notificationBanner: {
-    backgroundColor: "#2563eb",
-    color: "white",
-    padding: "10px 20px",
-    textAlign: "center",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "600",
-    zIndex: 1000,
-    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-  },
+
   greetingsCard: {
     background: "#fff",
     padding: "15px 20px",

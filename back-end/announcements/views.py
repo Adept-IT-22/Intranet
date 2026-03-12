@@ -14,6 +14,9 @@ class AnnouncementListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
+        if request.user.role != 'admin' and not request.user.is_superuser:
+            return Response({"detail": "Permission denied. Only admins can create announcements."}, status=status.HTTP_403_FORBIDDEN)
+            
         serializer = AnnouncementSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -31,6 +34,9 @@ class AnnouncementDetailView(APIView):
             return None
 
     def delete(self, request, pk):
+        if request.user.role != 'admin' and not request.user.is_superuser:
+            return Response({"detail": "Permission denied. Only admins can delete announcements."}, status=status.HTTP_403_FORBIDDEN)
+            
         announcement = self.get_object(pk)
         if not announcement:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)

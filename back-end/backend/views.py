@@ -34,10 +34,19 @@ def root_view(request):
 @permission_classes([IsAuthenticated])
 def current_user(request):
     user = request.user
+    # Instead of just a role string, we provide specific capabilities
+    # This prevents hardcoding "admin" strings on the frontend
+    is_admin_user = (user.role == "admin" or user.is_superuser)
+    
     return Response({
         "id": user.id,
         "username": user.username,
         "email": user.email,
+        "role": "admin" if is_admin_user else user.role,
+        "capabilities": {
+            "can_post_announcements": is_admin_user or user.has_perm('announcements.add_announcement'),
+            "can_delete_announcements": is_admin_user or user.has_perm('announcements.delete_announcement'),
+        }
     })
 
 @api_view(["GET"])

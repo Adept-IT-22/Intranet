@@ -10,14 +10,17 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemAvatar,
+  Avatar,
   Divider,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  ListItemButton,
 } from "@mui/material";
-import { Delete } from "@mui/icons-material";
+import { Delete, Campaign } from "@mui/icons-material";
 
 const CorporateAnnouncements = () => {
   const [username, setUsername] = useState("");
@@ -29,17 +32,33 @@ const CorporateAnnouncements = () => {
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
   const [deleteId, setDeleteId] = useState(null);
-  const [userRole, setUserRole] = useState("");
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [readIds, setReadIds] = useState([]);
+  const [capabilities, setCapabilities] = useState({
+    can_post_announcements: false,
+    can_delete_announcements: false,
+  });
 
   // Fetch current user to check role
   useEffect(() => {
+    setReadIds(JSON.parse(localStorage.getItem("read_announcements") || "[]"));
     if (!token) return;
     api.get("/auth/user/", {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => setUserRole(res.data.role))
-      .catch(err => console.error("Error fetching user role:", err));
+      .then(res => setCapabilities(res.data.capabilities))
+      .catch(err => console.error("Error fetching user capabilities:", err));
   }, [token]);
+
+  const handleAnnouncementClick = (announcement) => {
+    setSelectedAnnouncement(announcement);
+    if (!readIds.includes(announcement.id)) {
+      const newReadIds = [...readIds, announcement.id];
+      setReadIds(newReadIds);
+      localStorage.setItem("read_announcements", JSON.stringify(newReadIds));
+      window.dispatchEvent(new CustomEvent("announcementsRead"));
+    }
+  };
 
   // Login to get JWT
   const handleLogin = () => {
@@ -129,85 +148,108 @@ const CorporateAnnouncements = () => {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Paper sx={{ p: 4, mb: 4, boxShadow: 3 }}>
-        <Typography variant="h5" gutterBottom>Corporate Announcements</Typography>
+      {(!token || capabilities.can_post_announcements) && (
+        <Paper sx={{ p: 4, mb: 4, boxShadow: 3 }}>
+          <Typography variant="h5" gutterBottom>Corporate Announcements</Typography>
+          {!token && (
+            <Box>
+              <TextField
+                label="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+              <Button variant="contained" color="primary" onClick={handleLogin} fullWidth>
+                Login
+              </Button>
+              {error && <Typography color="error" sx={{ mt: 1 }}>{error}</Typography>}
+            </Box>
+          )}
 
-        {!token && (
-          <Box>
-            <TextField
-              label="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <Button variant="contained" color="primary" onClick={handleLogin} fullWidth>
-              Login
-            </Button>
-            {error && <Typography color="error" sx={{ mt: 1 }}>{error}</Typography>}
-          </Box>
-        )}
-
-        {token && userRole === "superadmin" && (
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-              Post New Announcement
-            </Typography>
-            <TextField
-              label="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              multiline
-              rows={4}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <Button variant="contained" color="primary" onClick={handlePostAnnouncement}>
-              Post Announcement
-            </Button>
-            {error && <Typography color="error" sx={{ mt: 1 }}>{error}</Typography>}
-          </Box>
-        )}
-      </Paper>
+          {token && capabilities.can_post_announcements && (
+            <Box>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                Post New Announcement
+              </Typography>
+              <TextField
+                label="Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                label="Content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                multiline
+                rows={4}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+              <Button variant="contained" color="primary" onClick={handlePostAnnouncement}>
+                Post Announcement
+              </Button>
+              {error && <Typography color="error" sx={{ mt: 1 }}>{error}</Typography>}
+            </Box>
+          )}
+        </Paper>
+      )}
 
       {token && (
         <Paper sx={{ p: 2, boxShadow: 2 }}>
           <Typography variant="h6" gutterBottom>All Announcements</Typography>
           <List>
-            {announcements.map(a => (
+            {announcements.map(a => {
+              const isRead = readIds.includes(a.id);
+              return (
               <Box key={a.id}>
                 <ListItem
+                  disablePadding
                   secondaryAction={
-                    userRole === "superadmin" && (
-                      <IconButton edge="end" color="error" onClick={() => setDeleteId(a.id)}>
+                    capabilities.can_delete_announcements && (
+                      <IconButton edge="end" color="error" onClick={(e) => { e.stopPropagation(); setDeleteId(a.id); }}>
                         <Delete />
                       </IconButton>
                     )
                   }
+                  sx={{ mb: 1 }}
                 >
-                  <ListItemText
-                    primary={a.title}
-                    secondary={a.summary || a.details}
-                  />
+                  <ListItemButton 
+                    onClick={() => handleAnnouncementClick(a)}
+                    sx={{ backgroundColor: isRead ? "transparent" : "rgba(25, 118, 210, 0.08)", borderRadius: "8px" }}
+                  >
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: isRead ? "grey.400" : "primary.main" }}>
+                        <Campaign />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={<Typography variant="subtitle1" fontWeight={isRead ? "normal" : "bold"}>{a.title}</Typography>}
+                      secondary={
+                        <React.Fragment>
+                          <Typography variant="body2" color="text.secondary" noWrap sx={{ display: 'block', maxWidth: '85%' }}>
+                            {a.summary || a.details}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(a.date).toLocaleDateString()}
+                          </Typography>
+                        </React.Fragment>
+                      }
+                    />
+                  </ListItemButton>
                 </ListItem>
-                <Divider />
               </Box>
-            ))}
+            )})}
           </List>
         </Paper>
       )}
@@ -221,6 +263,24 @@ const CorporateAnnouncements = () => {
         <DialogActions>
           <Button onClick={() => setDeleteId(null)}>Cancel</Button>
           <Button color="error" onClick={() => handleDeleteAnnouncement(deleteId)}>Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View full announcement dialog */}
+      <Dialog open={selectedAnnouncement !== null} onClose={() => setSelectedAnnouncement(null)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>
+          {selectedAnnouncement?.title}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', minHeight: '100px' }}>
+            {selectedAnnouncement?.details}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
+            Posted on: {selectedAnnouncement?.date ? new Date(selectedAnnouncement.date).toLocaleDateString() : ""}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedAnnouncement(null)} color="primary">Close</Button>
         </DialogActions>
       </Dialog>
     </Container>
