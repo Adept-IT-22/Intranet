@@ -7,21 +7,20 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("", root_view, name="root"),
-
     path("admin/", admin.site.urls),
 
     # Auth / JWT
-    path("api/signup/", signup_view, name="signup"), # Reverted from api/auth/signup/
+    path("api/signup/", signup_view, name="signup"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/user/", current_user, name="current_user"),
 
-    # App Modules
+    # App Modules (Simplified includes to match frontend paths)
     path("api/chat/", include("chat.urls")),
-    path("api/announcements/", include("announcements.urls")),
-    path("api/documents/", include("documents.urls")),
-    path("api/events/", include("events.urls")),
-    path("api/it-support/", include("support.urls")),
+    path("api/", include("announcements.urls")),
+    path("api/", include("documents.urls")),
+    path("api/", include("events.urls")),
+    path("api/support/", include("support.urls")),
 
     # Admin / Management
     path("api/admin/users/", user_list, name="user_list"),
