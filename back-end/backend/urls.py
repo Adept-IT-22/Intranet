@@ -11,7 +11,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # Auth / JWT
-    path("api/auth/signup/", signup_view, name="signup"),
+    path("api/signup/", signup_view, name="signup"), # Reverted from api/auth/signup/
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/user/", current_user, name="current_user"),
