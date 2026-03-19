@@ -1,0 +1,11 @@
+username,email,role,department,team
+john.doe,john.doe@adept-techno.com,employee,it,support
+jane.smith,jane.smith@adept-techno.com,manager,hr,kitro
+mike.ross,mike.ross@adept-techno.com,admin,finance,devops
+sarah.connor,sarah.connor@adept-techno.com,employee,marketing,kitro
+bruce.wayne,bruce.wayne@adept-techno.com,manager,it,devops
+clark.kent,clark.kent@adept-techno.com,employee,it,support
+peter.parker,peter.parker@adept-techno.com,employee,it,devops
+bruce.banner,bruce.banner@adept-techno.com,admin,it,kitro
+natasha.romanoff,natasha.romanoff@adept-techno.com,manager,hr,support
+tony.stark,tony.stark@adept-techno.com,admin,it,devops

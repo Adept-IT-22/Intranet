@@ -1,4 +1,4 @@
-﻿from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -10,6 +10,8 @@ from .serializers import UserSerializer, ChatMessageSerializer
 import uuid
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+import csv
+import io
 
 User = get_user_model()
 
@@ -266,3 +268,14 @@ def manage_group_participants(request, conversation_id):
         return Response({"error": "Invalid action"}, status=400)
         
     return Response({"message": f"User {action}ed successfully"})
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_conversation(request, conversation_id):
+    if request.user.role != "admin" and not request.user.is_superuser:
+        return Response({"error": "Admin access required"}, status=403)
+    
+    conv = get_object_or_404(Conversation, id=conversation_id)
+    conv_name = conv.name or str(conv.id)
+    conv.delete()
+    return Response({"message": f"Conversation '{conv_name}' deleted successfully"})

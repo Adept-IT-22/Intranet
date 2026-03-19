@@ -56,3 +56,73 @@ backend.models.CustomUser.DoesNotExist: CustomUser matching query does not exist
 Unauthorized: /api/token/
 Unauthorized: /api/token/
 Unauthorized: /api/token/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/announcements/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/chat/unread-count/
+Unauthorized: /api/announcements/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/announcements/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/chat/conversations/455ec263-257b-4a61-bce1-f89caa09a060/send/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/chat/conversations/
+Unauthorized: /api/chat/users/
+Unauthorized: /api/auth/user/
+Not Found: /static/admin/css/base.css
+Not Found: /static/admin/css/dark_mode.css
+Not Found: /static/admin/css/login.css
+Not Found: /static/admin/css/nav_sidebar.css
+Not Found: /static/admin/js/theme.js
+Not Found: /static/admin/css/responsive.css
+Not Found: /static/admin/js/nav_sidebar.js
+Not Found: /static/admin/css/nav_sidebar.css
+Not Found: /static/admin/css/responsive.css
+Not Found: /static/admin/css/login.css
+Not Found: /favicon.ico
+Not Found: /static/admin/css/dark_mode.css
+Not Found: /static/admin/css/base.css
+Not Found: /static/admin/css/dashboard.css
+Not Found: /static/admin/css/nav_sidebar.css
+Not Found: /static/admin/js/theme.js
+Not Found: /static/admin/css/responsive.css
+Not Found: /static/admin/js/nav_sidebar.js
+Not Found: /static/admin/css/dashboard.css
+Not Found: /static/admin/css/nav_sidebar.css
+Not Found: /static/admin/css/responsive.css
+Unauthorized: /api/chat/users/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/chat/conversations/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/chat/users/
+Unauthorized: /api/chat/conversations/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/admin/users/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/admin/users/
+Unauthorized: /api/admin/users/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/admin/users/
+Unauthorized: /api/auth/user/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Unauthorized: /api/chat/conversations/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/chat/users/
+Unauthorized: /api/auth/user/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/
+Not Found: /api/announcements/

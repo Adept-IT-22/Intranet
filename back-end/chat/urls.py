@@ -14,6 +14,7 @@ urlpatterns = [
     path('conversations/<str:conversation_id>/messages/<int:message_id>/edit/', views.edit_chat_message, name='edit_chat_message'),
 
     path('conversations/<str:conversation_id>/delete/', views.delete_chat_message, name='delete_chat_message'),
+    path('conversations/<str:conversation_id>/delete-group/', views.delete_conversation, name='delete_conversation'),
     path('conversations/<str:conversation_id>/update-name/', views.update_group_name, name='update_group_name'),
     path('conversations/<str:conversation_id>/manage-participants/', views.manage_group_participants, name='manage_group_participants'),
 ]

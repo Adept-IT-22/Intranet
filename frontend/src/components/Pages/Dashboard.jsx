@@ -11,6 +11,7 @@ import {
   FaBook,
   FaLightbulb,
   FaBell,
+  FaUserShield,
 } from "react-icons/fa";
 import logo from "../../assets/adeptlogo.png";
 import GreetingsBar from "./GreetingsBar";
@@ -164,6 +165,29 @@ export default function Dashboard() {
       });
   }, [navigate]);
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const token = localStorage.getItem("access_token");
+    try {
+      const response = await fetch("/api/profile/upload-avatar/", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Upload failed");
+      
+      setUser({ ...user, avatar: data.avatar_url });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const getAvatarDisplay = () => {
     if (user?.avatar) {
       return <img src={user.avatar} alt={user.username} style={styles.avatar} />;
@@ -220,6 +244,24 @@ export default function Dashboard() {
                 )}
               </NavLink>
             ))}
+
+            {/* Admin Link (Only for admins/superusers) */}
+            {(user?.role === "admin" || user?.is_superuser) && (
+              <NavLink
+                to="/dashboard/admin"
+                title="Admin Panel"
+                style={({ isActive }) => ({
+                  ...styles.link,
+                  backgroundColor: isActive ? "rgba(255,255,255,0.15)" : "transparent",
+                  borderRadius: "10px",
+                  padding: "8px",
+                  position: "relative",
+                  marginTop: "auto", // Push to bottom if possible
+                })}
+              >
+                <FaUserShield size={28} />
+              </NavLink>
+            )}
           </nav>
         </aside>
 
@@ -325,6 +367,38 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowProfileModal(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button style={styles.closeBtn} onClick={() => setShowProfileModal(false)}>&times;</button>
+            <h2 style={{ marginBottom: "20px" }}>My Profile</h2>
+            
+            <div style={{ position: "relative", width: "120px", height: "120px", margin: "0 auto 20px" }}>
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Profile" style={{ ...styles.avatar, width: "120px", height: "120px" }} />
+              ) : (
+                <div style={{ ...styles.avatar, width: "120px", height: "120px", fontSize: "40px", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5" }}>
+                  {user?.username?.substring(0, 2).toUpperCase()}
+                </div>
+              )}
+              <label style={styles.avatarLabel}>
+                <FaLaptop size={14} /> Edit
+                <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: "none" }} />
+              </label>
+            </div>
+
+            <div style={{ textAlign: "center", marginBottom: "30px" }}>
+              <h3 style={{ margin: "5px 0" }}>{user?.username}</h3>
+              <p style={{ color: "#666" }}>{user?.email}</p>
+              <div style={styles.roleTag}>{user?.role || "Member"}</div>
+            </div>
+
+            <button onClick={handleLogout} style={styles.logoutBtnFull}>Logout</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -425,4 +499,31 @@ const styles = {
     boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
     marginBottom: "20px",
   },
+  modalOverlay: {
+    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
+    zIndex: 1000,
+  },
+  modalContent: {
+    background: "white", padding: "40px", borderRadius: "16px", width: "100%", maxWidth: "400px",
+    position: "relative", boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+  },
+  closeBtn: {
+    position: "absolute", top: "15px", right: "20px", background: "none", border: "none",
+    fontSize: "24px", cursor: "pointer", color: "#666"
+  },
+  avatarLabel: {
+    position: "absolute", bottom: "5px", right: "5px", background: "#1B467A", color: "white",
+    padding: "6px 12px", borderRadius: "20px", fontSize: "12px", cursor: "pointer",
+    display: "flex", alignItems: "center", gap: "5px", border: "2px solid white"
+  },
+  roleTag: {
+    display: "inline-block", padding: "4px 12px", borderRadius: "12px",
+    backgroundColor: "#e7f0fd", color: "#1B467A", fontSize: "12px", fontWeight: "600",
+    marginTop: "10px", textTransform: "capitalize"
+  },
+  logoutBtnFull: {
+    width: "100%", padding: "12px", backgroundColor: "#dc3545", color: "white",
+    border: "none", borderRadius: "8px", fontWeight: "600", cursor: "pointer"
+  }
 };

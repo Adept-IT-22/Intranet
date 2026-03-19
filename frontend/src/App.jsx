@@ -14,6 +14,7 @@ import Announcements from "./components/Pages/Announcements";
 import Innovations from "./components/Pages/Innovations";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Calls from "./components/Pages/Calls";
+import AdminPanel from "./components/Pages/AdminPanel";
 
 const App = () => {
   useEffect(() => {
@@ -48,6 +49,7 @@ const App = () => {
           <Route path="announcements" element={<Announcements />} />
           <Route path="innovations" element={<Innovations />} />
           <Route path="calls" element={<Calls />} />
+          <Route path="admin" element={<AdminPanel />} />
         </Route>
       </Route>
 
