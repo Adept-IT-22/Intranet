@@ -5,7 +5,7 @@ import os
 from .settings import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # Azure App Service provides the WEBSITE_HOSTNAME environment variable
 ALLOWED_HOSTS = [
@@ -15,6 +15,8 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '172.171.244.92',
     'backend',  # Docker container name
+    'db',
+    '*' # For development/docker flexibility
 ]
 
 # Database configuration for production
