@@ -46,7 +46,7 @@ def current_user(request):
         "username": user.username,
         "email": user.email,
         "role": "admin" if is_admin_user else user.role,
-        "avatar": request.build_absolute_uri(user.avatar.url) if user.avatar else None,
+        "avatar": user.avatar.url if user.avatar else None,
         "capabilities": {
             "can_post_announcements": is_admin_user or user.has_perm('announcements.add_announcement'),
             "can_delete_announcements": is_admin_user or user.has_perm('announcements.delete_announcement'),
@@ -151,7 +151,7 @@ def employee_list(request):
             "role": emp.role or "Employee",
             "department": emp.department or "General",
             "email": emp.email,
-            "photo": request.build_absolute_uri(emp.avatar.url) if emp.avatar else f"https://i.pravatar.cc/150?u={emp.username}"
+            "photo": emp.avatar.url if emp.avatar else None,
         }
         for emp in employees
     ])
@@ -235,7 +235,7 @@ def upload_avatar(request):
     
     return Response({
         "message": "Avatar updated successfully",
-        "avatar_url": request.build_absolute_uri(user.avatar.url)
+        "avatar_url": user.avatar.url
     })
 
 @api_view(["DELETE"])

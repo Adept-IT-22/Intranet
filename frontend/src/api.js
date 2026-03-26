@@ -26,14 +26,29 @@ api.interceptors.response.use(
         if (refreshToken) {
           const res = await axios.post("/api/token/refresh/", { refresh: refreshToken });
           if (res.status === 200) {
-            localStorage.setItem("access_token", res.data.access);
-            api.defaults.headers.common["Authorization"] = `Bearer ${res.data.access}`;
+            const newAccessToken = res.data.access;
+            localStorage.setItem("access_token", newAccessToken);
+
+            // If rotation is enabled, update the refresh token too
+            if (res.data.refresh) {
+              localStorage.setItem("refresh_token", res.data.refresh);
+            }
+
+            // Update defaults for new requests
+            api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+
+            // ✅ Update headers for the retried request
+            if (originalRequest.headers) {
+              originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+            }
+
             return api(originalRequest);
           }
         }
       } catch (refreshError) {
-        console.error("Session expired. Logging out...");
-        localStorage.clear();
+        console.error("Session expired or refresh failed. Logging out...");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         window.location.href = "/login";
       }
     }

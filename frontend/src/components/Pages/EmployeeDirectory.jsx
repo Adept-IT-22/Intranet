@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import api from "../../api";
+import Avatar from "../Common/Avatar";
 
 export default function EmployeeDirectory() {
   const [employees, setEmployees] = useState([]);
@@ -9,13 +11,8 @@ export default function EmployeeDirectory() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const token = localStorage.getItem("access_token");
-        const response = await fetch("/api/employees/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error("Failed to fetch employees");
-        const data = await response.json();
-        setEmployees(data);
+        const response = await api.get("/employees/");
+        setEmployees(response.data);
       } catch (err) {
         console.error("Error fetching employees:", err);
       } finally {
@@ -81,16 +78,11 @@ export default function EmployeeDirectory() {
                   textAlign: "center",
                 }}
               >
-                <div style={{ position: "relative", width: 80, height: 80, margin: "auto" }}>
-                  <img
-                    src={emp.photo || "https://i.pravatar.cc/150"}
-                    alt={emp.name}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                    }}
+                <div style={{ margin: "auto", display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
+                  <Avatar 
+                    src={emp.photo} 
+                    name={emp.name} 
+                    size={80} 
                   />
                 </div>
 

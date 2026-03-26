@@ -53,7 +53,10 @@ const App = () => {
         </Route>
       </Route>
 
-      {/* Redirect root to login */}
+      {/* Home redirects to Dashboard (which will handle auth check) */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* Wildcard fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

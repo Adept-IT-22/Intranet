@@ -92,8 +92,8 @@ const ITSupport = () => {
           <h2 style={{ color: "#004080" }}>Contact</h2>
           <p>
             <strong>Phone:</strong>{" "}
-            <a href="tel:+254712345678" style={{ color: "#004080" }}>
-              +254 712 345 678
+            <a href="tel:+254705711100" style={{ color: "#004080" }}>
+              +254 705 711 100
             </a>
           </p>
           <p>

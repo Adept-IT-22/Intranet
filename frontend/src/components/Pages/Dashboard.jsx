@@ -12,9 +12,13 @@ import {
   FaLightbulb,
   FaBell,
   FaUserShield,
+  FaCamera,
+  FaTrashAlt
 } from "react-icons/fa";
 import logo from "../../assets/adeptlogo.png";
 import GreetingsBar from "./GreetingsBar";
+import api from "../../api";
+import Avatar from "../Common/Avatar";
 
 // ✅ Inject Google Fonts (Open Sans)
 const openSansLink = document.createElement("link");
@@ -71,20 +75,14 @@ export default function Dashboard() {
     if (!token || !user) return;
 
     const fetchCount = () => {
-      fetch("/api/chat/unread-count/", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => setTotalChatUnread(data.unread_count))
+      api.get("/chat/unread-count/")
+        .then(res => setTotalChatUnread(res.data.unread_count))
         .catch(err => console.error("Error fetching unread count:", err));
 
-      fetch("/api/announcements/", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
+      api.get("/announcements/")
+        .then(res => {
           const readIds = JSON.parse(localStorage.getItem("read_announcements") || "[]");
-          const unread = data.filter(a => !readIds.includes(a.id)).length;
+          const unread = res.data.filter(a => !readIds.includes(a.id)).length;
           setUnreadAnnouncements(unread);
         })
         .catch(err => console.error("Error fetching announcements for badge:", err));
@@ -150,18 +148,12 @@ export default function Dashboard() {
       return;
     }
 
-    fetch("/api/auth/user/", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch user info");
-        return res.json();
-      })
-      .then((data) => setUser(data))
+    api.get("/auth/user/")
+      .then((res) => setUser(res.data))
       .catch((err) => {
         console.error("Error fetching user:", err);
-        localStorage.removeItem("access_token");
-        navigate("/login");
+        // api.js handles 401 redirect, so we don't necessarily need to clear here
+        // but it doesn't hurt.
       });
   }, [navigate]);
 
@@ -172,42 +164,33 @@ export default function Dashboard() {
     const formData = new FormData();
     formData.append("avatar", file);
 
-    const token = localStorage.getItem("access_token");
     try {
-      const response = await fetch("/api/profile/upload-avatar/", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      const response = await api.post("/profile/upload-avatar/", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Upload failed");
-      
-      setUser({ ...user, avatar: data.avatar_url });
+      setUser({ ...user, avatar: response.data.avatar_url });
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.error || "Upload failed");
     }
   };
 
-  const getAvatarDisplay = () => {
-    if (user?.avatar) {
-      return <img src={user.avatar} alt={user.username} style={styles.avatar} />;
+  const handleRemoveAvatar = async () => {
+    if (!window.confirm("Are you sure you want to remove your profile picture?")) return;
+    try {
+      await api.delete(`/admin/users/${user.id}/remove-avatar/`);
+      setUser({ ...user, avatar: null });
+    } catch (err) {
+      alert("Failed to remove avatar");
     }
-    const initials = user?.username?.substring(0, 2).toUpperCase() || "U";
+  };
+
+  const getAvatarDisplay = (size = 40) => {
     return (
-      <div
-        style={{
-          ...styles.avatar,
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "white",
-          fontWeight: "600",
-          fontSize: "14px",
-        }}
-      >
-        {initials}
-      </div>
+      <Avatar 
+        src={user?.avatar} 
+        name={user?.username} 
+        size={size} 
+      />
     );
   };
 
@@ -376,17 +359,20 @@ export default function Dashboard() {
             <h2 style={{ marginBottom: "20px" }}>My Profile</h2>
             
             <div style={{ position: "relative", width: "120px", height: "120px", margin: "0 auto 20px" }}>
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Profile" style={{ ...styles.avatar, width: "120px", height: "120px" }} />
-              ) : (
-                <div style={{ ...styles.avatar, width: "120px", height: "120px", fontSize: "40px", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5" }}>
-                  {user?.username?.substring(0, 2).toUpperCase()}
-                </div>
-              )}
-              <label style={styles.avatarLabel}>
-                <FaLaptop size={14} /> Edit
+              {getAvatarDisplay(120)}
+              <label style={styles.avatarLabel} title="Change Photo">
+                <FaCamera size={14} />
                 <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: "none" }} />
               </label>
+              {user?.avatar && (
+                <button 
+                  onClick={handleRemoveAvatar}
+                  style={styles.removeAvatarBtn}
+                  title="Remove Photo"
+                >
+                  <FaTrashAlt size={12} />
+                </button>
+              )}
             </div>
 
             <div style={{ textAlign: "center", marginBottom: "30px" }}>
@@ -525,5 +511,21 @@ const styles = {
   logoutBtnFull: {
     width: "100%", padding: "12px", backgroundColor: "#dc3545", color: "white",
     border: "none", borderRadius: "8px", fontWeight: "600", cursor: "pointer"
+  },
+  removeAvatarBtn: {
+    position: "absolute",
+    bottom: "5px",
+    left: "5px",
+    background: "#ff4d4d",
+    color: "white",
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    border: "2px solid white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
   }
 };
