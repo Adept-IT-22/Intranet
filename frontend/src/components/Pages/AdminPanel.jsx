@@ -77,6 +77,24 @@ export default function AdminPanel() {
     }
   };
 
+  const handleToggleStatus = async (userId, username) => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/toggle-status/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to toggle status");
+      setMessage(data.message);
+      fetchData();
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleDeleteConversation = async (convId, name) => {
     if (!window.confirm(`Are you sure you want to delete group chat "${name}"?`)) return;
     try {
@@ -162,6 +180,7 @@ export default function AdminPanel() {
                   <th>Username</th>
                   <th>Email</th>
                   <th>Role</th>
+                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -183,9 +202,25 @@ export default function AdminPanel() {
                       </select>
                     </td>
                     <td style={styles.cell}>
+                      <span style={{
+                        ...styles.statusBadge,
+                        backgroundColor: u.is_active ? "#d1e7dd" : "#f8d7da",
+                        color: u.is_active ? "#0f5132" : "#842029"
+                      }}>
+                        {u.is_active ? "Approved" : "Pending"}
+                      </span>
+                    </td>
+                    <td style={styles.cell}>
                       <div style={{ display: "flex", gap: "10px" }}>
-                        <button onClick={() => handleRemoveAvatar(u.id, u.username)} style={styles.secondaryButton}>
-                          Remove Image
+                        <button 
+                          onClick={() => handleToggleStatus(u.id, u.username)} 
+                          style={{
+                            ...styles.secondaryButton,
+                            backgroundColor: u.is_active ? "#6c757d" : "#0d6efd"
+                          }}
+                          disabled={u.is_superuser}
+                        >
+                          {u.is_active ? "Deactivate" : "Approve Account"}
                         </button>
                         <button onClick={() => handleDeleteUser(u.id, u.username)} style={styles.deleteButton} disabled={u.is_superuser}>
                           <FaUserMinus /> Delete
@@ -301,7 +336,8 @@ const styles = {
   tableRow: { "&:hover": { backgroundColor: "#fcfcfc" } },
   select: { padding: "6px 10px", borderRadius: "6px", border: "1px solid #ddd" },
   deleteButton: { padding: "6px 12px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" },
-  secondaryButton: { padding: "6px 12px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px" },
+  secondaryButton: { padding: "6px 12px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  statusBadge: { padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600" },
   uploadCard: { background: "#fff", padding: "40px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", textAlign: "center" },
   uploadForm: { display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" },
   fileInput: { padding: "10px", border: "1px dashed #1B467A", borderRadius: "8px", width: "100%", maxWidth: "400px" },

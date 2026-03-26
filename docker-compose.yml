@@ -6,6 +6,7 @@ services:
       context: ./back-end
       dockerfile: Dockerfile
     container_name: intranet-backend
+    env_file: .env
     command: >
       sh -c "
       python manage.py migrate &&

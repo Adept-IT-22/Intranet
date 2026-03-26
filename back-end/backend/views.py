@@ -26,7 +26,9 @@ def signup_view(request):
         return Response({"error": "Username already taken"}, status=400)
 
     user = User.objects.create_user(username=username, email=email, password=password)
-    return Response({"message": "User created successfully", "username": user.username})
+    user.is_active = False  # Account must be approved before login
+    user.save()
+    return Response({"message": "User created successfully. Please wait for admin approval.", "username": user.username})
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -125,6 +127,21 @@ def update_user_role(request, user_id):
         user.save()
         return Response({"message": f"User {user.username} updated to {role}"})
     return Response({"error": "Invalid role"}, status=400)
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def toggle_user_status(request, user_id):
+    if request.user.role != "admin" and not request.user.is_superuser:
+        return Response({"error": "Admin access required"}, status=403)
+    
+    user = get_object_or_404(User, id=user_id)
+    if user.is_superuser:
+        return Response({"error": "Cannot deactivate superusers"}, status=400)
+        
+    user.is_active = not user.is_active
+    user.save()
+    status_str = "activated" if user.is_active else "deactivated"
+    return Response({"message": f"User {user.username} has been {status_str} ✅"})
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])

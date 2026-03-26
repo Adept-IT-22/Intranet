@@ -53,7 +53,7 @@ const LoginSignup = () => {
           navigate(redirectTo);
         } else {
           // After signup, tell user to login
-          alert("✅ Account created successfully! Please log in.");
+          alert("✅ Account created successfully! Please wait for an administrator to approve your account before you can log in.");
           setIsLogin(true);
         }
       } else {

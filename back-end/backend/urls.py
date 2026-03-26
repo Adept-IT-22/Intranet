@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from backend.views import signup_view, root_view, current_user, user_list, update_user_role, delete_user, employee_list, upload_employees_csv, upload_avatar, remove_avatar
+from backend.views import signup_view, root_view, current_user, user_list, update_user_role, toggle_user_status, delete_user, employee_list, upload_employees_csv, upload_avatar, remove_avatar
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -25,6 +25,7 @@ urlpatterns = [
     # Admin / Management
     path("api/admin/users/", user_list, name="user_list"),
     path("api/admin/users/<int:user_id>/role/", update_user_role, name="update_user_role"),
+    path("api/admin/users/<int:user_id>/toggle-status/", toggle_user_status, name="toggle_user_status"),
     path("api/admin/users/<int:user_id>/delete/", delete_user, name="delete_user"),
     path("api/employees/", employee_list, name="employee_list"),
     path("api/admin/upload-employees/", upload_employees_csv, name="upload_employees_csv"),
