@@ -1,12 +1,11 @@
-/* LMS Page - Redesign matching Adept LMS */
+/* Final Simplified LMS Page Styles */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
 :root {
-  --primary-blue: #1e3a5f;
+  --primary-blue: #0f172a;
   --secondary-yellow: #fbbf24;
-  --bg-light: #f3f4f6;
+  --bg-light: #ffffff;
   --text-dark: #111827;
-  --text-muted: #4b5563;
 }
 
 .lms-page {
@@ -14,90 +13,50 @@
   background-color: var(--bg-light);
   min-height: 100vh;
   margin: 0;
-  display: flex;
-  flex-direction: column;
 }
 
-/* Header */
+/* Header - Ultra lean */
 .lms-header {
   background: white;
   padding: 1rem 5%;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
 .lms-logo-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--primary-blue);
+  color: #1e3a8a;
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
 }
 
-.lms-nav {
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-}
-
-.lms-nav-link {
-  text-decoration: none;
-  color: var(--text-muted);
-  font-weight: 500;
-  transition: color 0.3s;
-}
-
-.lms-nav-link:hover {
-  color: var(--primary-blue);
-}
-
-.lms-login-btn {
-  background: var(--primary-blue);
-  color: white;
-  padding: 0.6rem 1.5rem;
-  border-radius: 9999px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: transform 0.2s, background 0.3s;
-}
-
-.lms-login-btn:hover {
-  transform: translateY(-1px);
-  background: #162a44;
-}
-
-/* Hero Section */
+/* Hero - Focus of the page */
 .lms-hero {
   display: flex;
-  min-height: 480px;
-  background: var(--primary-blue);
+  min-height: calc(100vh - 70px);
+  background: #1e3a5f;
   color: white;
   position: relative;
   overflow: hidden;
 }
 
-/* Diagonal Split with CSS */
+/* Diagonal split exactly like live site */
 .lms-hero::after {
   content: "";
   position: absolute;
   top: 0;
-  right: -5%;
-  width: 45%;
+  right: -8%;
+  width: 48%;
   height: 100%;
   background: var(--secondary-yellow);
-  transform: skewX(-12deg);
+  transform: skewX(-14deg);
   z-index: 1;
 }
 
 .lms-hero-content {
   flex: 1.2;
-  padding: 4rem 5%;
+  padding: 0 5%;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -105,7 +64,7 @@
 }
 
 .lms-hero h1 {
-  font-size: 3.5rem;
+  font-size: 4.5rem;
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 1.5rem;
@@ -114,47 +73,32 @@
 }
 
 .lms-hero p {
-  font-size: 1.125rem;
-  margin-bottom: 2.5rem;
+  font-size: 1.25rem;
+  margin-bottom: 3rem;
   opacity: 0.9;
   max-width: 500px;
   line-height: 1.6;
-  color: white;
 }
 
-.lms-hero-btns {
-  display: flex;
-  gap: 1rem;
-}
-
-/* Base button styles to override common defaults */
 .lms-btn {
-  padding: 1rem 2rem;
+  padding: 1.2rem 2.5rem;
   border-radius: 8px;
   font-weight: 700;
   text-decoration: none;
+  font-size: 1.1rem;
+  transition: all 0.2s ease-in-out;
   display: inline-block;
-  transition: all 0.2s ease;
 }
 
 .btn-lms-primary {
   background: var(--secondary-yellow);
-  color: var(--primary-blue);
-}
-
-.btn-lms-outline {
-  border: 2px solid white;
-  color: white;
+  color: #1e3a5f;
 }
 
 .btn-lms-primary:hover {
   background: #f59e0b;
   transform: translateY(-2px);
-}
-
-.btn-lms-outline:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
 .lms-hero-visual {
@@ -163,13 +107,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
 }
 
-/* Abstract Graphic instead of AI image */
+/* Abstract Mockup visual using standard Lucide-based colors */
 .lms-mockup-stack {
-  width: 300px;
-  height: 300px;
+  width: 350px;
+  height: 350px;
   position: relative;
 }
 
@@ -177,141 +120,19 @@
   position: absolute;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border: 4px solid var(--primary-blue);
+  border: 1px solid rgba(0,0,0,0.1);
 }
 
-.mockup-1 { width: 180px; height: 120px; top: 10%; left: 0%; z-index: 3; }
-.mockup-2 { width: 160px; height: 120px; top: 30%; left: 20%; z-index: 2; opacity: 0.8; }
-.mockup-3 { width: 220px; height: 140px; top: 50%; left: 10%; z-index: 1; opacity: 0.6; }
-
-/* Features Section */
-.lms-section {
-  padding: 5rem 5%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.lms-section-header {
-  text-align: center;
-  margin-bottom: 4rem;
-}
-
-.lms-section-header h2 {
-  font-size: 2.25rem;
-  color: var(--primary-blue);
-  font-weight: 800;
-  margin-bottom: 1rem;
-}
-
-.lms-section-header p {
-  color: var(--text-muted);
-  max-width: 700px;
-  margin: 0 auto;
-  font-size: 1.1rem;
-}
-
-.lms-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
-}
-
-.lms-card {
-  background: white;
-  padding: 3rem 2.5rem;
-  border-radius: 1.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.3s;
-  border: 1px solid rgba(0,0,0,0.05);
-}
-
-.lms-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.lms-card h3 {
-  font-size: 1.75rem;
-  color: var(--primary-blue);
-  margin-bottom: 1.5rem;
-  font-weight: 700;
-}
-
-.lms-card-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 2.5rem 0;
-  flex-grow: 1;
-}
-
-.lms-card-list li {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  color: var(--text-muted);
-  font-size: 1rem;
-}
-
-.btn-card-action {
-  background: var(--secondary-yellow);
-  color: var(--primary-blue);
-  padding: 0.75rem 2rem;
-  border-radius: 9999px;
-  text-decoration: none;
-  font-weight: 700;
-  text-align: center;
-  transition: background 0.2s, transform 0.2s;
-  display: inline-block;
-}
-
-.btn-card-action:hover {
-  background: #f59e0b;
-  transform: translateY(-1px);
-}
-
-.lms-footer-mini {
-  background: #0f172a;
-  color: white;
-  padding: 1.5rem 5%;
-  font-size: 0.875rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #10b981;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: currentColor;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 1; }
-  100% { opacity: 0.4; }
-}
+.mockup-1 { width: 220px; height: 160px; top: 10%; left: -10%; z-index: 3; }
+.mockup-2 { width: 200px; height: 160px; top: 35%; left: 10%; z-index: 2; transform: scale(0.95); opacity: 0.8; }
+.mockup-3 { width: 240px; height: 180px; top: 55%; left: 0%; z-index: 1; transform: scale(0.9); opacity: 0.6; }
 
 @media (max-width: 1024px) {
-  .lms-hero-content { padding: 3rem 5%; }
-  .lms-hero h1 { font-size: 2.75rem; }
-  .lms-hero::after { display: none; }
+  .lms-hero h1 { font-size: 3rem; }
+  .lms-hero::after { width: 100%; right: 0; left: 0; opacity: 0.1; transform: none; }
   .lms-hero-visual { display: none; }
 }

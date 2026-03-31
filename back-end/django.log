@@ -305,3 +305,13 @@ Traceback (most recent call last):
     raise self.model.DoesNotExist(
 backend.models.CustomUser.DoesNotExist: CustomUser matching query does not exist.
 Unauthorized: /api/token/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/
+Unauthorized: /api/token/
+Unauthorized: /api/token/
+Unauthorized: /api/auth/user/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/
+Unauthorized: /api/token/
+Unauthorized: /api/token/
