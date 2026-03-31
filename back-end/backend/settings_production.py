@@ -9,6 +9,7 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # Azure App Service provides the WEBSITE_HOSTNAME environment variable
 ALLOWED_HOSTS = [
+    'intranet.adept-techno.co.ke',
     os.environ.get('WEBSITE_HOSTNAME', 'localhost'),
     '*.azurewebsites.net',
     'localhost',
@@ -66,32 +67,44 @@ if 'AZURE_STORAGE_ACCOUNT_NAME' in os.environ:
     AZURE_ACCOUNT_KEY = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
     AZURE_CONTAINER = os.environ.get('AZURE_STORAGE_CONTAINER', 'media')
 
-# CORS settings for production
+# CORS & CSRF
 CORS_ALLOWED_ORIGINS = [
+    "https://intranet.adept-techno.co.ke",
     "http://172.171.244.92:8080",
     "http://172.171.244.92:80",
     "http://localhost:8080",
     "http://localhost:80",
-    "http://frontend:80",  # Docker container name
+    "http://frontend:80",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://intranet.adept-techno.co.ke",
     "http://172.171.244.92:8080",
     "http://172.171.244.92:80",
     "http://localhost:8080",
     "http://localhost:80",
-    "http://frontend:80",  # Docker container name
+    "http://frontend:80",
 ]
 
-# Security settings for production
-SECURE_SSL_REDIRECT = False  # Disable for local development
+# Proxy settings
+SECURE_SSL_REDIRECT = False # Let Nginx handle this
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# Security Headers
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
+
+# Secure Cookies for HTTPS
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = True
 
 # Cache configuration (Redis)
 if 'REDIS_URL' in os.environ:
