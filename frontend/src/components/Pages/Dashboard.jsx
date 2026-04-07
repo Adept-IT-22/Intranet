@@ -65,7 +65,7 @@ export default function Dashboard() {
 
   const showNotification = (title, body) => {
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/favicon.ico', tag: 'chat-message' });
+      new Notification(title, { body, icon: '/favicon.png', tag: 'chat-message' });
     }
   };
 

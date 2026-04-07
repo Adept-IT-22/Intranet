@@ -29,7 +29,7 @@ const SimpleChat = () => {
     if ("Notification" in window && Notification.permission === "granted") {
       const notification = new Notification(`New message from ${sender}`, {
         body: messageContent,
-        icon: "/favicon.ico", // You can customize this
+        icon: "/favicon.png", // Changed to .png to match existing file
         tag: `chat-${sender}`, // Prevents duplicate notifications from same sender
       });
 
