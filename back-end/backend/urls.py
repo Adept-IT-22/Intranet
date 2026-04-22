@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from backend.views import signup_view, root_view, current_user, user_list, update_user_role, toggle_user_status, delete_user, employee_list, upload_employees_csv, upload_avatar, remove_avatar
+from backend.views import signup_view, root_view, current_user, generate_sso_token, user_list, update_user_role, toggle_user_status, delete_user, employee_list, upload_employees_csv, upload_avatar, remove_avatar
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -13,6 +13,7 @@ urlpatterns = [
     path("api/signup/", signup_view, name="signup"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/sso-token/", generate_sso_token, name="sso_token"),
     path("api/auth/user/", current_user, name="current_user"),
 
     # App Modules (Simplified includes to match frontend paths)
