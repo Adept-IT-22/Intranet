@@ -1,10 +1,30 @@
 import React from 'react';
+import api from '../../api';
 import innovationImg1 from '../../assets/ideahub1-pic.png';
 
 const InnovationsBoard = () => {
   const useButtonCTA = true;
   
   const ideahubLink = "https://ideahub.adept-techno.co.ke/";
+  // Use the environment variable for the SSO route
+  const ideahubSSORoute = import.meta.env.VITE_IDEAHUB_SSO_URL;
+
+  const handleContribute = async (e) => {
+    e.preventDefault();
+    try {
+      // 1. Fetch the short-lived SSO token from the Intranet backend
+      const response = await api.get('/auth/sso-token/');
+      const ssoToken = response.data.token;
+
+      // 2. Redirect to Ideahub with the token in the URL
+      // We use the local 4200 port for dev, but this would be the real domain in prod
+      window.location.href = `${ideahubSSORoute}?token=${ssoToken}`;
+    } catch (error) {
+      console.error("SSO Handoff failed:", error);
+      // Fallback: just open the link normally if SSO fails
+      window.open(ideahubLink, "_blank");
+    }
+  };
 
   return (
     <div style={styles.container}>
@@ -12,7 +32,7 @@ const InnovationsBoard = () => {
         Innovations
       </h1>
       <p style={styles.subtitle}>
-        Your Ideas, Our Future
+        Your Ideas Matter
       </p>
 
       <div style={styles.imageContainer}>
@@ -30,8 +50,7 @@ const InnovationsBoard = () => {
           /* Style B: PROMINENT BUTTON */
           <a 
             href={ideahubLink} 
-            target="_blank" 
-            rel="noopener noreferrer"
+            onClick={handleContribute}
             style={styles.buttonCTA}
           >
             💡 Click here to contribute your ideas
@@ -42,8 +61,7 @@ const InnovationsBoard = () => {
             Want to shape the future?{' '}
             <a 
               href={ideahubLink} 
-              target="_blank" 
-              rel="noopener noreferrer"
+              onClick={handleContribute}
               style={styles.textLink}
             >
               Click here to contribute your ideas

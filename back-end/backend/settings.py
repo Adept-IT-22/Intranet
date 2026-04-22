@@ -144,6 +144,9 @@ CHANNEL_LAYERS = {
 AUTH_USER_MODEL = "backend.CustomUser"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# SSO Configuration
+SSO_SHARED_SECRET = config("SSO_SHARED_SECRET", default=None)
+
 # -------------------------
 # STATIC & MEDIA
 # -------------------------
@@ -168,3 +171,6 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 ADMIN_EMAILS = ["it@adept-techno.com", "ithlpdsk@adept-techno.com"]
+
+SSO_ISSUER = os.getenv("SSO_ISSUER", "http://localhost:8001")
+SSO_AUDIENCE = os.getenv("SSO_AUDIENCE", "http://localhost:5065")
