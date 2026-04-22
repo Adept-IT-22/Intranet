@@ -1,3 +1,6 @@
+import jwt
+import datetime
+from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -29,6 +32,34 @@ def signup_view(request):
     user.is_active = False  # Account must be approved before login
     user.save()
     return Response({"message": "User created successfully. Please wait for admin approval.", "username": user.username})
+
+@api_view(["GET"])
+def generate_sso_token(request):
+    """
+    Generates a short-lived SSO token for hand-off to Ideahub.
+    Signed with a Shared Secret that both apps know.
+    """
+    if not settings.SSO_SHARED_SECRET:
+        return Response({"error": "SSO not configured on server"}, status=500)
+
+    user = request.user
+    
+    payload = {
+        "email": user.email,
+        "sub": str(user.id),
+        "name": user.username,
+        "iat": datetime.datetime.utcnow(),
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5), 
+        "iss": settings.SSO_ISSUER,
+        "aud": settings.SSO_AUDIENCE,
+    }
+
+    try:
+        secret_bytes = bytes.fromhex(settings.SSO_SHARED_SECRET)
+        token = jwt.encode(payload, secret_bytes, algorithm="HS256")
+        return Response({"token": token})
+    except Exception as e:
+        return Response({"error": f"Token generation failed: {str(e)}"}, status=500)
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
