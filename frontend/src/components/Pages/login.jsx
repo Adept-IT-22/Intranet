@@ -29,12 +29,10 @@ const LoginSignup = () => {
         }
         : formData;
 
-      console.log("🚀 Sending payload to", `/api/${endpoint}`, payload);
 
       const res = await api.post(`/${endpoint}`, payload);
 
       const data = res.data;
-      console.log("📩 Received response:", res.status, data);
 
       if (res.status === 200 || res.status === 201) {
         if (isLogin) {
