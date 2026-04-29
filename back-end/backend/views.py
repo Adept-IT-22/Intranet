@@ -8,6 +8,11 @@ from django.db.models import Q
 from chat.models import ChatMessage
 import csv
 import io
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 User = get_user_model()
@@ -268,4 +273,57 @@ def remove_avatar(request, user_id):
         target_user.save()
         
     return Response({"message": "Avatar removed"})
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def admin_reset_user_password(request, user_id):
+    if request.user.role != "admin" and not request.user.is_superuser:
+        return Response({"error": "Admin access required"}, status=403)
+    
+    user = get_object_or_404(User, id=user_id)
+    
+    if not user.email:
+        return Response({"error": "User does not have an email address configured."}, status=400)
+
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    
+    frontend_url = request.META.get('HTTP_ORIGIN', 'http://localhost:5173')
+    reset_link = f"{frontend_url}/reset-password/{uid}/{token}/"
+    
+    try:
+        send_mail(
+            subject="Password Reset Request",
+            message=f"Hello {user.username},\n\nAn administrator has requested a password reset for your account. Please click the link below to set a new password:\n\n{reset_link}\n\nIf you did not request this, please contact IT immediately.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        return Response({"message": f"Password reset email sent to {user.email}"})
+    except Exception as e:
+        return Response({"error": f"Failed to send email: {str(e)}"}, status=500)
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_password_confirm(request):
+    uidb64 = request.data.get("uid")
+    token = request.data.get("token")
+    new_password = request.data.get("new_password")
+    
+    if not uidb64 or not token or not new_password:
+        return Response({"error": "Missing uid, token, or new_password"}, status=400)
+        
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+        
+    if user is not None and default_token_generator.check_token(user, token):
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Password has been reset successfully."})
+    else:
+        return Response({"error": "Invalid or expired token."}, status=400)
+
 
