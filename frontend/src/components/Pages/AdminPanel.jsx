@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaUserShield, FaUserEdit, FaUserMinus, FaCheckCircle, FaExclamationTriangle, FaFileUpload, FaComments, FaTrash, FaUsers } from "react-icons/fa";
+import { FaUserShield, FaUserEdit, FaUserMinus, FaCheckCircle, FaExclamationTriangle, FaFileUpload, FaComments, FaTrash, FaUsers, FaKey } from "react-icons/fa";
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("users");
@@ -92,6 +92,23 @@ export default function AdminPanel() {
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleResetPassword = async (userId, username) => {
+    if (!window.confirm(`Are you sure you want to send a password reset link to ${username}?`)) return;
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/reset-password/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send password reset");
+      setMessage(data.message || `Password reset link sent to ${username}.`);
+      setTimeout(() => setMessage(null), 5000);
+    } catch (err) {
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -211,7 +228,7 @@ export default function AdminPanel() {
                       </span>
                     </td>
                     <td style={styles.cell}>
-                      <div style={{ display: "flex", gap: "10px" }}>
+                      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                         <button 
                           onClick={() => handleToggleStatus(u.id, u.username)} 
                           style={{
@@ -220,7 +237,18 @@ export default function AdminPanel() {
                           }}
                           disabled={u.is_superuser}
                         >
-                          {u.is_active ? "Deactivate" : "Approve Account"}
+                          {u.is_active ? "Deactivate" : "Approve"}
+                        </button>
+                        <button 
+                          onClick={() => handleResetPassword(u.id, u.username)} 
+                          style={{
+                            ...styles.secondaryButton,
+                            backgroundColor: "#198754",
+                            display: "flex",
+                            alignItems: "center"
+                          }}
+                        >
+                          <FaKey style={{ marginRight: "4px" }} /> Reset Pass
                         </button>
                         <button onClick={() => handleDeleteUser(u.id, u.username)} style={styles.deleteButton} disabled={u.is_superuser}>
                           <FaUserMinus /> Delete
