@@ -228,7 +228,7 @@ export default function AdminPanel() {
                       </span>
                     </td>
                     <td style={styles.cell}>
-                      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "nowrap", alignItems: "center" }}>
                         <button 
                           onClick={() => handleToggleStatus(u.id, u.username)} 
                           style={{
@@ -363,8 +363,8 @@ const styles = {
   cell: { padding: "15px 20px", borderBottom: "1px solid #eee" },
   tableRow: { "&:hover": { backgroundColor: "#fcfcfc" } },
   select: { padding: "6px 10px", borderRadius: "6px", border: "1px solid #ddd" },
-  deleteButton: { padding: "6px 12px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" },
-  secondaryButton: { padding: "6px 12px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  deleteButton: { padding: "6px 10px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" },
+  secondaryButton: { padding: "6px 10px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" },
   statusBadge: { padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600" },
   uploadCard: { background: "#fff", padding: "40px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", textAlign: "center" },
   uploadForm: { display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" },
