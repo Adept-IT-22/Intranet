@@ -1,62 +1,123 @@
-import React, { useState } from 'react';
+import React from 'react';
+import innovationImg1 from '../../assets/ideahub1-pic.png';
 
 const InnovationsBoard = () => {
-  const [ideas, setIdeas] = useState([
-    { id: 1, title: 'AI-powered Knowledge Base', votes: 12 },
-    { id: 2, title: 'Dark Mode for Intranet', votes: 8 },
-    { id: 3, title: 'Employee Skill Badges', votes: 5 },
-  ]);
-
-  const addIdea = () => {
-    const newIdea = { id: Date.now(), title: `New Idea #${ideas.length + 1}`, votes: 0 };
-    setIdeas([...ideas, newIdea]);
-  };
+  const useButtonCTA = true;
+  
+  const ideahubLink = "https://ideahub.adept-techno.co.ke/";
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}>
-      <h1 style={{ textAlign: 'center', color: '#333' }}>🚀 Innovations Board</h1>
-      <p style={{ textAlign: 'center', color: '#666' }}>
-        Share, vote, and discuss innovative ideas to improve our organization!
+    <div style={styles.container}>
+      <h1 style={styles.title}>
+        Innovations
+      </h1>
+      <p style={styles.subtitle}>
+        Your Ideas, Our Future
       </p>
 
-      <div style={{ marginTop: '30px' }}>
-        {ideas.map((idea) => (
-          <div
-            key={idea.id}
-            style={{
-              padding: '15px',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              marginBottom: '10px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#f9f9f9',
-            }}
-          >
-            <span>{idea.title}</span>
-            <span>👍 {idea.votes}</span>
-          </div>
-        ))}
+      <div style={styles.imageContainer}>
+        <div style={styles.imageWrapper}>
+          <img 
+            src={innovationImg1} 
+            alt="Innovation Screenshot" 
+            style={styles.image} 
+          />
+        </div>
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        <button
-          onClick={addIdea}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: 'none',
-            background: '#007bff',
-            color: '#fff',
-            cursor: 'pointer',
-          }}
-        >
-          + Submit New Idea
-        </button>
+      <div style={styles.actionContainer}>
+        {useButtonCTA ? (
+          /* Style B: PROMINENT BUTTON */
+          <a 
+            href={ideahubLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={styles.buttonCTA}
+          >
+            💡 Click here to contribute your ideas
+          </a>
+        ) : (
+          /* Style A: CLEAN TEXT LINK */
+          <p style={styles.textLinkContainer}>
+            Want to shape the future?{' '}
+            <a 
+              href={ideahubLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={styles.textLink}
+            >
+              Click here to contribute your ideas
+            </a>
+          </p>
+        )}
       </div>
     </div>
   );
+};
+
+const styles = {
+  container: {
+    padding: '20px',
+    maxWidth: '1200px',
+    margin: 'auto'
+  },
+  title: {
+    textAlign: 'center',
+    color: '#333',
+    fontSize: '3rem',
+    fontWeight: '800',
+    marginBottom: '15px'
+  },
+  subtitle: {
+    textAlign: 'center',
+    color: '#555',
+    marginBottom: '50px',
+    fontSize: '1.3rem',
+    maxWidth: '800px',
+    margin: '0 auto 50px',
+    lineHeight: '1.6'
+  },
+  imageContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '50px'
+  },
+  imageWrapper: {
+    width: '100%',
+    maxWidth: '1000px'
+  },
+  image: {
+    width: '100%',
+    height: '450px',
+    objectFit: 'cover',
+    borderRadius: '5px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
+  },
+  actionContainer: {
+    textAlign: 'center',
+    padding: '20px'
+  },
+  buttonCTA: {
+    display: 'inline-block',
+    padding: '16px 40px',
+    background: '#1B467A',
+    color: '#fff',
+    textDecoration: 'none',
+    borderRadius: '4px',
+    fontSize: '1.2rem',
+    fontWeight: '600',
+    transition: 'background-color 0.2s',
+    border: 'none'
+  },
+  textLinkContainer: {
+    fontSize: '1.1rem',
+    color: '#444'
+  },
+  textLink: {
+    color: '#007bff',
+    fontWeight: 'bold',
+    textDecoration: 'underline'
+  }
 };
 
 export default InnovationsBoard;
