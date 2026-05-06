@@ -15,6 +15,7 @@ urlpatterns = [
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/sso-token/", generate_sso_token, name="sso_token"),
     path("api/auth/user/", current_user, name="current_user"),
+    path("api/auth/reset-password-confirm/", reset_password_confirm, name="reset_password_confirm"),
 
     # App Modules (Simplified includes to match frontend paths)
     path("api/chat/", include("chat.urls")),
@@ -28,6 +29,7 @@ urlpatterns = [
     path("api/admin/users/<int:user_id>/role/", update_user_role, name="update_user_role"),
     path("api/admin/users/<int:user_id>/toggle-status/", toggle_user_status, name="toggle_user_status"),
     path("api/admin/users/<int:user_id>/delete/", delete_user, name="delete_user"),
+    path("api/admin/users/<int:user_id>/reset-password/", admin_reset_user_password, name="admin_reset_user_password"),
     path("api/employees/", employee_list, name="employee_list"),
     path("api/admin/upload-employees/", upload_employees_csv, name="upload_employees_csv"),
     path("api/profile/upload-avatar/", upload_avatar, name="upload_avatar"),

@@ -15,6 +15,7 @@ import Innovations from "./components/Pages/Innovations";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Calls from "./components/Pages/Calls";
 import AdminPanel from "./components/Pages/AdminPanel";
+import ResetPassword from "./components/Pages/ResetPassword";
 
 const App = () => {
   useEffect(() => {
@@ -35,6 +36,7 @@ const App = () => {
     <Routes>
       {/* Public login route */}
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
 
       {/* Protected app routes */}
       <Route element={<ProtectedRoute />}>

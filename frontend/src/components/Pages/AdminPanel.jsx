@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaUserShield, FaUserEdit, FaUserMinus, FaCheckCircle, FaExclamationTriangle, FaFileUpload, FaComments, FaTrash, FaUsers } from "react-icons/fa";
+import { FaUserShield, FaUserEdit, FaUserMinus, FaCheckCircle, FaExclamationTriangle, FaFileUpload, FaComments, FaTrash, FaUsers, FaKey } from "react-icons/fa";
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("users");
@@ -92,6 +92,23 @@ export default function AdminPanel() {
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleResetPassword = async (userId, username) => {
+    if (!window.confirm(`Are you sure you want to send a password reset link to ${username}?`)) return;
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/reset-password/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send password reset");
+      setMessage(data.message || `Password reset link sent to ${username}.`);
+      setTimeout(() => setMessage(null), 5000);
+    } catch (err) {
+      setError(err.message);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -211,7 +228,7 @@ export default function AdminPanel() {
                       </span>
                     </td>
                     <td style={styles.cell}>
-                      <div style={{ display: "flex", gap: "10px" }}>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "nowrap", alignItems: "center" }}>
                         <button 
                           onClick={() => handleToggleStatus(u.id, u.username)} 
                           style={{
@@ -220,7 +237,18 @@ export default function AdminPanel() {
                           }}
                           disabled={u.is_superuser}
                         >
-                          {u.is_active ? "Deactivate" : "Approve Account"}
+                          {u.is_active ? "Deactivate" : "Approve"}
+                        </button>
+                        <button 
+                          onClick={() => handleResetPassword(u.id, u.username)} 
+                          style={{
+                            ...styles.secondaryButton,
+                            backgroundColor: "#198754",
+                            display: "flex",
+                            alignItems: "center"
+                          }}
+                        >
+                          <FaKey style={{ marginRight: "4px" }} /> Reset Pass
                         </button>
                         <button onClick={() => handleDeleteUser(u.id, u.username)} style={styles.deleteButton} disabled={u.is_superuser}>
                           <FaUserMinus /> Delete
@@ -335,8 +363,8 @@ const styles = {
   cell: { padding: "15px 20px", borderBottom: "1px solid #eee" },
   tableRow: { "&:hover": { backgroundColor: "#fcfcfc" } },
   select: { padding: "6px 10px", borderRadius: "6px", border: "1px solid #ddd" },
-  deleteButton: { padding: "6px 12px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" },
-  secondaryButton: { padding: "6px 12px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  deleteButton: { padding: "6px 10px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" },
+  secondaryButton: { padding: "6px 10px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" },
   statusBadge: { padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "600" },
   uploadCard: { background: "#fff", padding: "40px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", textAlign: "center" },
   uploadForm: { display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" },
