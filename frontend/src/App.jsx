@@ -18,6 +18,7 @@ import Calls from "./components/Pages/Calls";
 import AdminPanel from "./components/Pages/AdminPanel";
 import ResetPassword from "./components/Pages/ResetPassword";
 import api from "./api";
+import "./components/Common/AuthLoading.css";
 
 const Callback = () => {
   const { isAuthenticated, isLoading } = useAuth0();
@@ -32,8 +33,8 @@ const Callback = () => {
   }, [isAuthenticated, isLoading, navigate]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
-      <div style={{ fontSize: "1.25rem", fontWeight: 300 }}>Completing login...</div>
+    <div className="auth-loading-container">
+      <div className="auth-loading-text">Completing login...</div>
     </div>
   );
 };
@@ -95,8 +96,8 @@ const App = () => {
 
   if (isLoading || (isAuthenticated && !tokenReady)) {
     return (
-      <div style={{ minHeight: "100vh", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
-        <div style={{ fontSize: "1.25rem", fontWeight: 300 }}>Initializing secure session...</div>
+      <div className="auth-loading-container">
+        <div className="auth-loading-text">Initializing secure session...</div>
       </div>
     );
   }
