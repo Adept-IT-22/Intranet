@@ -36,10 +36,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_AUTH0_DOMAIN=dev-2685h5q7efjt6peh.us.auth0.com
+        - VITE_AUTH0_CLIENT_ID=GjkjPfZrtR4XAv820vmde7SDlGeUnkwJ
+        - VITE_AUTH0_AUDIENCE=https://intranet/api
     container_name: intranet-frontend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     ports:
       - "8080:80"   
     depends_on:
