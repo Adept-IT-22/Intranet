@@ -68,11 +68,14 @@ INSTALLED_APPS = [
 ]
 
 
-# REST Framework JWT
+# Auth0 Settings
+AUTH0_DOMAIN = config("AUTH0_DOMAIN", default="")
+AUTH0_AUDIENCE = config("AUTH0_AUDIENCE", default="")
 
+# REST Framework JWT
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "backend.auth0_auth.Auth0Authentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
