@@ -1,0 +1,123 @@
+.login-page-container {
+  min-height: 100vh;
+  display: flex;
+}
+
+.login-left-panel {
+  width: 100%;
+  background-color: #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+@media (min-width: 768px) {
+  .login-left-panel {
+    width: 50%;
+  }
+}
+
+.auth-form-container {
+  width: 100%;
+  max-width: 28rem;
+  text-align: left;
+}
+
+.login-title {
+  color: white;
+  font-size: 3rem;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
+
+.login-subtitle {
+  color: #9ca3af;
+  font-size: 1.5rem;
+  font-weight: 300;
+  margin-bottom: 3rem;
+}
+
+.login-button {
+  width: 100%;
+  background-color: white;
+  color: #1f2937;
+  padding: 1rem 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+}
+
+.login-button:hover {
+  background-color: #f3f4f6;
+}
+
+.login-right-panel {
+  display: none;
+  width: 50%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23667eea"/><stop offset="100%" style="stop-color:%23764ba2"/></linearGradient></defs><rect width="800" height="600" fill="url(%23bg)"/><circle cx="200" cy="200" r="60" fill="white" opacity="0.1"/><circle cx="600" cy="400" r="80" fill="white" opacity="0.1"/><circle cx="400" cy="100" r="40" fill="white" opacity="0.1"/></svg>');
+}
+
+@media (min-width: 768px) {
+  .login-right-panel {
+    display: block;
+  }
+}
+
+.login-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+.login-welcome-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-welcome-box {
+  text-align: center;
+  color: white;
+  padding: 3rem;
+}
+
+.login-avatar-circle {
+  width: 8rem;
+  height: 8rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+}
+
+.login-avatar-icon {
+  width: 4rem;
+  height: 4rem;
+  color: white;
+}
+
+.login-welcome-title {
+  font-size: 1.875rem;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
+
+.login-welcome-subtitle {
+  font-size: 1.25rem;
+  opacity: 0.7;
+}

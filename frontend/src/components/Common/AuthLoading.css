@@ -1,0 +1,13 @@
+.auth-loading-container {
+  min-height: 100vh;
+  background-color: #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.auth-loading-text {
+  font-size: 1.25rem;
+  font-weight: 300;
+}
