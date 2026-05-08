@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import Login from "./components/Pages/login";
 import Dashboard from "./components/Pages/Dashboard";
 import Home from "./components/Pages/Home";
@@ -16,8 +17,68 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Calls from "./components/Pages/Calls";
 import AdminPanel from "./components/Pages/AdminPanel";
 import ResetPassword from "./components/Pages/ResetPassword";
+import api from "./api";
+
+const Callback = () => {
+  const { isAuthenticated, isLoading } = useAuth0();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    } else if (!isLoading && !isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+      <div style={{ fontSize: "1.25rem", fontWeight: 300 }}>Completing login...</div>
+    </div>
+  );
+};
 
 const App = () => {
+  const { getAccessTokenSilently, isAuthenticated, isLoading } = useAuth0();
+  const [tokenReady, setTokenReady] = useState(false);
+
+  // Fetch token and save to localStorage BEFORE rendering routes
+  useEffect(() => {
+    if (isAuthenticated) {
+      getAccessTokenSilently()
+        .then(token => {
+          localStorage.setItem("access_token", token);
+          setTokenReady(true);
+        })
+        .catch(error => {
+          console.error("Error fetching token for localStorage", error);
+          setTokenReady(true);
+        });
+    } else if (!isLoading) {
+      localStorage.removeItem("access_token");
+      setTokenReady(true);
+    }
+  }, [isAuthenticated, isLoading, getAccessTokenSilently]);
+
+  useEffect(() => {
+    const interceptor = api.interceptors.request.use(
+      async (config) => {
+        if (isAuthenticated) {
+          try {
+            const token = await getAccessTokenSilently();
+            config.headers.Authorization = `Bearer ${token}`;
+          } catch (error) {
+            console.error("Error fetching token", error);
+          }
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    return () => api.interceptors.request.eject(interceptor);
+  }, [getAccessTokenSilently, isAuthenticated]);
+
   useEffect(() => {
     const handler = () => {
       const audio = new Audio("/sounds/notify.mp3");
@@ -32,10 +93,19 @@ const App = () => {
     };
   }, []);
 
+  if (isLoading || (isAuthenticated && !tokenReady)) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+        <div style={{ fontSize: "1.25rem", fontWeight: 300 }}>Initializing secure session...</div>
+      </div>
+    );
+  }
+
   return (
     <Routes>
-      {/* Public login route */}
+      {/* Public routes */}
       <Route path="/login" element={<Login />} />
+      <Route path="/callback" element={<Callback />} />
       <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
 
       {/* Protected app routes */}
