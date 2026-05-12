@@ -1,0 +1,68 @@
+.innovations-container {
+  padding: 10px; /* Reduced to make image larger */
+  max-width: 98%; /* Increased to fill more of the screen */
+  margin: 0 auto;
+}
+
+.innovations-title {
+  text-align: left; /* Aligned left to match the button */
+  color: #333;
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.innovations-subtitle {
+  text-align: left; /* Aligned left */
+  color: #555;
+  font-size: 1.4rem;
+  margin-bottom: 40px;
+  line-height: 1.6;
+}
+
+.innovations-image-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.innovations-image-wrapper {
+  width: 100%;
+  position: relative; /* Anchor for the button */
+}
+
+.innovations-overlay-content {
+  position: absolute;
+  bottom: 100px; /* Pushed up higher */
+  left: 60px;   /* Position from left of image */
+  z-index: 10;
+}
+
+.innovations-image {
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+}
+
+.innovations-button-cta {
+  display: inline-block;
+  padding: 18px 45px;
+  background-color: #fbbf24; /* Matched to your provided color */
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+
+.innovations-button-cta:hover {
+  background-color: #f59e0b;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+}

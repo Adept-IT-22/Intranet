@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   FaTh,
   FaUsers,
@@ -19,6 +20,7 @@ import logo from "../../assets/adeptlogo.png";
 import GreetingsBar from "./GreetingsBar";
 import api from "../../api";
 import Avatar from "../Common/Avatar";
+import "./Dashboard.css";
 
 // ✅ Inject Google Fonts (Open Sans)
 const openSansLink = document.createElement("link");
@@ -28,6 +30,7 @@ openSansLink.rel = "stylesheet";
 document.head.appendChild(openSansLink);
 
 export default function Dashboard() {
+  const { logout, getAccessTokenSilently } = useAuth0();
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -35,7 +38,7 @@ export default function Dashboard() {
   const [totalChatUnread, setTotalChatUnread] = useState(0);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1000);
-
+  const [isPending, setIsPending] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,91 +74,104 @@ export default function Dashboard() {
 
   // Fetch unread chat count & Subscribe to notifications
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token || !user) return;
+    if (!user) return;
 
-    const fetchCount = () => {
-      api.get("/chat/unread-count/")
-        .then(res => setTotalChatUnread(res.data.unread_count))
-        .catch(err => console.error("Error fetching unread count:", err));
-
-      api.get("/announcements/")
-        .then(res => {
-          const readIds = JSON.parse(localStorage.getItem("read_announcements") || "[]");
-          const unread = res.data.filter(a => !readIds.includes(a.id)).length;
-          setUnreadAnnouncements(unread);
-        })
-        .catch(err => console.error("Error fetching announcements for badge:", err));
-    };
-
-    fetchCount();
-
-    const handleAnnouncementsRead = () => {
-      fetchCount();
-    };
-    window.addEventListener("announcementsRead", handleAnnouncementsRead);
-
-    const backendBase = getBackendBaseUrl();
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsHost = backendBase.replace(/^https?:\/\//, '');
-    const wsUrl = `${wsProtocol}://${wsHost}/ws/notifications/?token=${token}`;
-
-    const nSocket = new WebSocket(wsUrl);
-    nSocket.onmessage = (event) => {
+    let nSocket;
+    const setupDashboard = async () => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "new_message_notification") {
+        const token = await getAccessTokenSilently();
+
+        const fetchCount = () => {
+          api.get("/chat/unread-count/")
+            .then(res => setTotalChatUnread(res.data.unread_count))
+            .catch(err => console.error("Error fetching unread count:", err));
+
+          api.get("/announcements/")
+            .then(res => {
+              const readIds = JSON.parse(localStorage.getItem("read_announcements") || "[]");
+              const unread = res.data.filter(a => !readIds.includes(a.id)).length;
+              setUnreadAnnouncements(unread);
+            })
+            .catch(err => console.error("Error fetching announcements for badge:", err));
+        };
+
+        fetchCount();
+
+        const handleAnnouncementsRead = () => {
           fetchCount();
-          // Check if it's from someone else
-          if (data.sender !== user.username) {
-            notificationAudioRef.current?.play().catch(() => { });
+        };
+        window.addEventListener("announcementsRead", handleAnnouncementsRead);
 
-            // Only show desktop notification if hidden OR on another page OR in a different chat
-            const activeChatId = localStorage.getItem('active_chat_id');
-            const isDifferentChat = String(activeChatId) !== String(data.conversation_id);
-            const isNotOnChatsPage = !location.pathname.includes('/dashboard/chats');
+        const backendBase = getBackendBaseUrl();
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsHost = backendBase.replace(/^https?:\/\//, '');
+        const wsUrl = `${wsProtocol}://${wsHost}/ws/notifications/?token=${token}`;
 
-            if (document.hidden || isNotOnChatsPage || isDifferentChat) {
-              showNotification(data.conversation_name || data.sender, data.message);
+        nSocket = new WebSocket(wsUrl);
+        nSocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "new_message_notification") {
+              fetchCount();
+              if (data.sender !== user.username) {
+                notificationAudioRef.current?.play().catch(() => { });
+
+                const activeChatId = localStorage.getItem('active_chat_id');
+                const isDifferentChat = String(activeChatId) !== String(data.conversation_id);
+                const isNotOnChatsPage = !location.pathname.includes('/dashboard/chats');
+
+                if (document.hidden || isNotOnChatsPage || isDifferentChat) {
+                  showNotification(data.conversation_name || data.sender, data.message);
+                }
+              }
+            } else if (data.type === "messages_read_notification") {
+              fetchCount();
             }
+          } catch (err) {
+            console.error("Error in dashboard notification socket:", err);
           }
-        } else if (data.type === "messages_read_notification") {
-          fetchCount();
-        }
+        };
+        window._dashboardCleanup = () => {
+          window.removeEventListener("announcementsRead", handleAnnouncementsRead);
+        };
+
       } catch (err) {
-        console.error("Error in dashboard notification socket:", err);
+        console.error("Failed to initialize dashboard sockets:", err);
       }
     };
 
+    setupDashboard();
+
     return () => {
-      nSocket.close();
-      window.removeEventListener("announcementsRead", handleAnnouncementsRead);
+      if (nSocket) nSocket.close();
+      if (window._dashboardCleanup) window._dashboardCleanup();
     };
-  }, [user, location.pathname]);
+  }, [user, location.pathname, getAccessTokenSilently]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1000);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // ✅ Logout function
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    navigate("/login");
+    logout({ logoutParams: { returnTo: window.location.origin } });
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      console.warn("❌ No token found, redirecting to login...");
-      navigate("/login");
-      return;
-    }
-
     api.get("/auth/user/")
-      .then((res) => setUser(res.data))
+      .then((res) => {
+        setUser(res.data);
+        setIsPending(false);
+      })
       .catch((err) => {
         console.error("Error fetching user:", err);
-        // api.js handles 401 redirect, so we don't necessarily need to clear here
-        // but it doesn't hurt.
+        if (err.response?.status === 403) {
+          setIsPending(true);
+        }
       });
-  }, [navigate]);
+  }, []);
 
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
@@ -193,6 +209,24 @@ export default function Dashboard() {
       />
     );
   };
+
+  if (isPending) {
+    return (
+      <div className="pending-container">
+        <FaUserShield size={80} className="pending-icon" />
+        <h1 className="pending-title">Account Pending</h1>
+        <p className="pending-text">
+          Your account has been created via Auth0, but an administrator needs to activate it before you can access the Intranet.
+        </p>
+        <button 
+          onClick={handleLogout}
+          className="pending-logout-button"
+        >
+          Logout
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "'Open Sans', sans-serif" }}>

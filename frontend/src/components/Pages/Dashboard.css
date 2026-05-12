@@ -1,0 +1,41 @@
+/* Styles for the Auth0 Pending state */
+.pending-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1B467A;
+  color: white;
+  text-align: center;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.pending-icon {
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.pending-title {
+  font-size: 2.5rem;
+  font-weight: 300;
+  margin-bottom: 10px;
+}
+
+.pending-text {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  max-width: 500px;
+  line-height: 1.6;
+}
+
+.pending-logout-button {
+  margin-top: 30px;
+  padding: 12px 30px;
+  background-color: white;
+  color: #1B467A;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}

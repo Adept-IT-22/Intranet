@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from backend.views import signup_view, root_view, current_user, generate_sso_token, user_list, update_user_role, toggle_user_status, delete_user, employee_list, upload_employees_csv, upload_avatar, remove_avatar
+from backend.views import signup_view, root_view, current_user, generate_sso_token, user_list, update_user_role, toggle_user_status, delete_user, admin_reset_user_password, reset_password_confirm, employee_list, upload_employees_csv, upload_avatar, remove_avatar
 from django.conf import settings
 from django.conf.urls.static import static
 
