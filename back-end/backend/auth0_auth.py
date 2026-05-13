@@ -96,6 +96,11 @@ class Auth0Authentication(authentication.BaseAuthentication):
                 logger.error(f'[Auth0] /userinfo fallback failed: {e}')
 
         logger.debug(f'[Auth0] Identity resolved: {email or auth0_id}')
+        
+        ROLES_NAMESPACE = 'https://ideahub.api'
+        auth0_roles = payload.get(f'{ROLES_NAMESPACE}/roles', [])
+        is_auth0_admin = 'admin' in auth0_roles
+        logger.info(f'[Auth0] Roles from token: {auth0_roles} | is_auth0_admin={is_auth0_admin}')
 
         user = None
 
@@ -113,9 +118,9 @@ class Auth0Authentication(authentication.BaseAuthentication):
             if user:
                 logger.info(f'[Auth0] Found user by Auth0 ID: {user.username} | is_active={user.is_active}')
 
-        # Create new pending user - new person
+        # Create new user - auto-activate if they are an Auth0 admin, else pending
         if not user:
-            logger.info(f'[Auth0] No existing user found. Creating new pending account for {email}')
+            logger.info(f'[Auth0] No existing user found. Creating account for {email} | auto_activate={is_auth0_admin}')
             
             # Generate a friendly username from the email prefix
             base_username = email.split('@')[0] if email else "user"
@@ -130,9 +135,18 @@ class Auth0Authentication(authentication.BaseAuthentication):
             user = User.objects.create(
                 username=friendly_username,
                 email=email,
-                is_active=False,
+                is_active=is_auth0_admin,      # Admins get in immediately
+                role='admin' if is_auth0_admin else None,
             )
-            logger.info(f'[Auth0] Created new user: {user.username} (ID: {user.id})')
+            logger.info(f'[Auth0] Created new user: {user.username} (ID: {user.id}) | is_active={user.is_active}')
+
+        # If user already exists but was created before Auth0 role sync —
+        # promote them now if Auth0 says they're admin
+        elif is_auth0_admin and (not user.is_active or user.role != 'admin'):
+            logger.info(f'[Auth0] Promoting existing user {user.username} to admin based on Auth0 role.')
+            user.is_active = True
+            user.role = 'admin'
+            user.save()
 
         # admin approval gate
         logger.info(f'[Auth0] Final user: {user.username} | is_active={user.is_active}')
