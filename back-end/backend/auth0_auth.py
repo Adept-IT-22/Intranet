@@ -76,7 +76,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
         email = (
             payload.get('email') or 
             payload.get(f'{settings.AUTH0_AUDIENCE}/email') or
-            payload.get('https://ideahub.api/email') or
+            payload.get('https://adept.api/email') or
             ''
         )
 
@@ -97,7 +97,7 @@ class Auth0Authentication(authentication.BaseAuthentication):
 
         logger.debug(f'[Auth0] Identity resolved: {email or auth0_id}')
         
-        ROLES_NAMESPACE = 'https://ideahub.api'
+        ROLES_NAMESPACE = 'https://adept.api'
         auth0_roles = payload.get(f'{ROLES_NAMESPACE}/roles', [])
         is_auth0_admin = 'admin' in auth0_roles
         logger.info(f'[Auth0] Roles from token: {auth0_roles} | is_auth0_admin={is_auth0_admin}')
