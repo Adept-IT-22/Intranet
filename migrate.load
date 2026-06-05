@@ -1,0 +1,6 @@
+LOAD DATABASE
+     FROM sqlite:///db.sqlite3
+     INTO postgresql://intranetuser:intranetpass@intranet-db:5432/intranetdb
+
+WITH reset sequences,
+     disable triggers;
