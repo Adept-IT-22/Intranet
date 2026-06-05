@@ -124,12 +124,24 @@ WSGI_APPLICATION = "backend.wsgi.application"
 ASGI_APPLICATION = "backend.asgi.application"
 
 
-# DATABASE (SQLite for dev)
+# DATABASE (SQLite for dev) - legacy
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
+# DATABASE — PostgreSQL (unified across all environments)
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "intranetdb",
+        "USER": "intranetuser",
+        "PASSWORD": "intranetpass",
+        "HOST": "localhost",
+        "PORT": "5433",
     }
 }
 
